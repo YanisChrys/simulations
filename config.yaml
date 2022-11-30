@@ -1,0 +1,13 @@
+
+# path to seed hap 1 & 2
+SEED_HAP_1: data/rThaEle1.pri.cur.20190820.fasta.gz
+SEED_HAP_2: data/rThaEle1.alt.cur.20190820.fasta.gz
+
+# set up a different amount of cores for jobs that should run fewer than the rest of the analysis
+CORES: 50
+
+#busco db to use
+LINEAGE: sauropsida_odb10
+
+sample_prefix: rThaEle1
+

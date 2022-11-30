@@ -1,0 +1,22 @@
+
+
+/bbmap/randomreads.sh -Xmx50g ref=ref.fa out1=sim_1.fastq out2=sim_2.fastq coverage=100 addpairnum=t minlength=125 maxlength=175 paired=t mininsert=490 maxinsert=520
+
+# fastqc / conda
+# trim: trimmomatic: / conda
+# Adapter trimming, Sliding window trimming, Trailing bases quality trimming, 
+# Leading bases quality trimming, Minimum read length, 
+# spades /conda
+# megahit / conda
+# soap denovo2 / conda
+# MIRA / conda
+# ALLPATHS LG /conda
+# Velvet / conda
+# abyss conda
+
+# after assembly:
+# QUAST / conda 
+# Mauve, InGAP-SV, 
+# https://anaconda.org/bioconda/gapfiller
+# 
+/MEGAHIT-1.2.9-Linux-x86_64-static/bin/megahit -1 sim_1.fastq -2 sim_1.fastq -o ./sim_assembly -t 40

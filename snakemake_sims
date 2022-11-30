@@ -1,0 +1,294 @@
+## create seeds, only has to be done once (depending on the number of runs per simulation)
+
+# yanis todo:
+# todo: fix folder system for version that will be made available to public/published so it agrees with:
+# https://snakemake.readthedocs.io/en/stable/snakefiles/deployment.html
+# use deepconsensus
+# simulations:
+# simlord / conda
+# pass module
+# simngs, wgsim
+# yaahs - juicer \ module
+# blocktools / conda
+# how to simulate diploid genome? alt assembly or mutation simulator?
+# add megahit, busco
+# assemblers { 
+# pb-falcon / pb-assembly / conda
+# peregrine-2021 / conda
+# trio-binning
+# dipasm
+# hi-canu / conda as canu
+# ipa \ conda pbipa
+# benchamrking for hifi assembler: 
+# https://www.biorxiv.org/content/10.1101/2022.02.15.480579v1.full
+# add plotting and statistics summaries
+
+
+######### Changes #########
+# found more pythonic way for seed list
+# added a sample prefix, so user can specify the sample
+# changed output looper to include sample name
+# wildcard constraints so snakemake doesnt get confused
+# small changes to hifiasm
+# changed awk command
+# removed module load, all programs should be in conda environment for reproducibility
+
+
+import random
+import os
+
+# CONFIG
+# for i in range(0,10):
+#     n = random.randint(1000,100000)
+#     seed_list.append(n)
+# seed_list = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20"]
+
+configfile: "config.yaml"
+
+seed_list=[format(x, '02d') for x in range(1,21,1)]
+
+## create chr_nm list (0001 - 0067)
+CHROMS = ["%04d" % x for x in range(1,68)]
+## create a haplotype list
+hap_list = ["hap1", "hap2"]
+
+#name of sample 
+sample_prefix=config["sample_prefix"]
+
+# path to seed hap 1 & 2
+
+SEED_HAP_1=config["SEED_HAP_1"]
+SEED_HAP_2=config["SEED_HAP_2"]
+
+#busco db to use
+LINEAGE=config["LINEAGE"]
+
+wildcard_constraints:
+    haps="hap[0-9]+",
+    seeds="[0-9]+",
+    chr_nm="[0-9]{4}"
+
+
+# example:
+# 01_SAMPLE_hap1/01_SAMPLE_0025
+# "['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20']\
+# _lynCan1_hap1/['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20']\
+# _lynCan1_0028.sam"
+def output_looper(seed_name, hap, cat=""):
+    for i in CHROMS:
+        if cat == "maf":
+            yield "{0}_{1}_{2}/{0}_{1}_{3}.maf".format(seed_name, sample_prefix, hap, i)
+        elif cat == "ref":
+            yield "{0}_{1}_{2}/{0}_{1}_{3}.ref".format(seed_name, sample_prefix, hap, i)
+        elif cat == "sam":
+            yield "{0}_{1}_{2}/{0}_{1}_{3}.sam".format(seed_name, sample_prefix, hap, i)
+
+## desired output after one full run
+
+rule all:
+    input:
+        expand("bam_files/{seeds}_{haps}_{sample}_{chr_nm}.bam", seeds=seed_list, haps=hap_list, chr_nm=CHROMS,sample=sample_prefix),
+        "stats/backmapping_stats.txt",
+        expand("busco/{sample}/run_{db}/missing_busco_list.tsv",db=LINEAGE,sample=sample_prefix),
+        "stats/assembly_stats.txt"
+
+
+## Step 1: Simulate and reassemble reads for both haplotypes 
+## simulate reads with pbsim, for different read lengths, one can adjust the length per read in
+## the shell command. If coverage per run is 3, 10 directories with output files can be generated in about 3 hours
+#output_looper(seed_name={seed_list}, hap=hap_list[0], cat="sam")
+rule run_sim_hap1:
+    input: 
+        genome = SEED_HAP_1
+    output:
+        bam = output_looper("{seeds}", hap=hap_list[0], cat="sam"),
+        ref = output_looper("{seeds}", hap=hap_list[0], cat="ref"),
+        maf = output_looper("{seeds}", hap=hap_list[0], cat="maf")
+    params:
+       	seed_id = "{seeds}",
+        prefix_sim = "{seeds}_{sample}_hap1/{seeds}_{sample}"
+    env-modules:
+        "pbsim3"
+    shell: """
+    pbsim --prefix {params.prefix_sim} --strategy wgs --genome {input.genome} \
+    --depth 3 --method errhmm --errhmm pbsim3/data/ERRHMM-SEQUEL.model \
+    --length-mean 1500 --pass-num 10 --seed {params.seed_id} 
+    """
+
+rule run_sim_hap2:
+    input: 
+        genome = SEED_HAP_2 ## fasta file was artificially mutated with SNPs and Indels
+    output:
+        bam = output_looper("{seeds}", hap=hap_list[2], cat="sam"),
+        ref = output_looper("{seeds}", hap=hap_list[2], cat="ref"),
+        maf = output_looper("{seeds}", hap=hap_list[2], cat="maf")
+    params:
+       	seed_id = "{seeds}",
+        prefix_sim = "{seeds}_{sample}_hap2/{seeds}_{sample}"
+    shell: """
+    pbsim --prefix {params.prefix_sim} --strategy wgs --genome {input.genome} \
+    --depth 3 --method errhmm --errhmm pbsim3/data/ERRHMM-SEQUEL.model \
+    --length-mean 1500 --pass-num 10 --seed {params.seed_id} 
+    """
+
+## convert sam output from simulations to bam
+
+rule make_bam:
+    input:
+        sam = "{seeds}_{sample}_{hap}/{seeds}_{sample}_{chr_nm}.sam"
+    output:
+        bam = "bam_files/{seeds}_{hap}_{sample}_{chr_nm}.bam"#output_looper("{seeds}", cat="bam")
+    shell:
+        "samtools view -b {input.sam} -o {output.bam} --threads 30"
+
+## get HiFi reads
+
+rule run_ccs:
+    input:
+        bam = "bam_files/{seeds}_{hap}_{sample}_{chr_nm}.bam"
+    output:
+        fastq = "fastq_files/{seeds}_{hap}_{sample}_{chr_nm}.fastq.gz"
+    shell:
+        "ccs {input.bam} {output.fastq} -j 30"
+
+## concatenate reads 
+
+rule cat_fastq:
+    input:
+        fastq = expand("fastq_files/{seeds}_{hap}_{sample}_{chr_nm}.fastq.gz", seeds=seed_list, hap=hap_list, chr_nm=CHROMS,sample=sample_prefix) 
+    output:
+        "fastq_files/all_pbsim.fastq.gz"
+    shell:
+        "cat {input.fastq} > {output}"
+
+## assemble with hifiasm using default parameters
+
+rule hifiasm_assembly:
+    input:
+        "fastq_files/all_pbsim.fastq.gz"
+    output:
+        "assembly/pbsim_asm.bp.p_ctg.gfa"
+    threads:
+        workdlow.cores
+    params:
+        inputpre="assembly/pbsim_asm"
+    shell:
+        "hifiasm --primary -l2 -t {threads} -o {params.inputpre} {input}"
+
+## Step 2: Backmapping and stats
+
+## convert gfa to fasta
+
+rule gfa_to_fa:
+    input:
+        "assembly/pbsim_asm.bp.p_ctg.gfa"
+    output:
+        "assembly/pbsim_asm.bp.p_ctg.fa"
+    params:
+        f"{AWK_VAR}"
+    shell:
+        "awk '/^S/{{print ">"$2;print $3}}' {input} > {output}"
+
+## compute basic summary stats for the assembly
+
+rule assembly_stats:
+    input:
+        "assembly/pbsim_asm.bp.p_ctg.fa"
+    output:
+        "stats/assembly_stats.txt"
+    shell:
+        "seqkit stats -a -T {input} > {output}"
+
+
+# BUSCO Score
+
+# -m: genome mode
+# -i: input
+# -o: output folder
+# -l: lineage/database - define it in config file
+# --out-path: general folder to place output
+# download_path: where to find the lineage/db information
+#vertebrata_odb9 and
+#tetrapoda_odb9
+rule RUN_BUSCO:
+    input:
+        "assembly/pbsim_asm.bp.p_ctg.fa"
+    output:
+        "busco/{sample}/run_{db}/missing_busco_list.tsv"
+    threads:
+        workflow.cores
+    params:
+        dataset_dir="busco_downloads",
+        out_dir="busco/",
+        run_name=sample_prefix,
+        lineage=LINEAGE
+    shell: """
+        busco -m genome \
+        -c {threads} \
+        -i {input} \
+        -o {params.run_name}
+        --download_path {params.dataset_dir} \
+        --out_path {params.out_dir} \
+        -l {params.lineage} \
+        --offline
+    """
+
+
+## shred assembly into 150 bp long "reads" with 50 bp overlap, creating faux reads with overall 1.5 x coverage
+# in a conda environment you should be able to call shred.sh from the terminal like normal
+rule backmapping_shredding:
+    input:
+        "assembly/pbsim_asm.bp.p_ctg.fa"
+    output:
+        "split_assembly/split_assembly.fa"
+    shell:
+        "shred.sh -Xmx10g in={input} out={output} length=150 minlength=10 overlap=50"
+
+## map these reads back to the original input file
+
+rule backmapping_mapping:
+    input:
+        asm = "split_assembly/split_assembly.fa",
+        genome = SEED_HAP_1
+    output:
+        "split_assembly/backmapped.sam"
+    threads:
+        config["CORES"]
+    shell:
+        "bwa mem {input.genome} {input.asm} -t {threads} > {output}""hap2"
+
+## convert sam to bam
+
+rule backmapping_bam:
+    input:
+        "split_assembly/backmapped.sam"
+    output:
+        "split_assembly/backmapped.bam"
+    shell:
+        "samtools view -b -o {output} {input} --threads 40"
+
+## sort bam file
+
+rule backmapping_sort:
+    input:
+        "split_assembly/backmapped.bam"
+    output:
+        "split_assembly/backmapped.srt.bam"
+    shell:
+        "samtools sort {input} --threads 40 > {output}"
+
+## compute average number of bases overlapped by at least one read
+
+rule backmapping_stats:
+    input:
+        "split_assembly/backmapped.srt.bam"
+    output:
+        "stats/backmapping_stats.txt"
+    shell:
+        "samtools coverage -m -A {input} > {output}"
+
+
+
+
+
+
