@@ -107,12 +107,12 @@ rule run_sim_hap1:
     params:
        	seed_id = "{seeds}",
         prefix_sim = "{seeds}_{sample}_hap1/{seeds}_{sample}"
-    env-modules:
-        "pbsim3"
+    envmodules:
+        "pbsim3/3.0.0"
     shell: """
-    pbsim --prefix {params.prefix_sim} --strategy wgs --genome {input.genome} \
-    --depth 3 --method errhmm --errhmm pbsim3/data/ERRHMM-SEQUEL.model \
-    --length-mean 1500 --pass-num 10 --seed {params.seed_id} 
+        pbsim --prefix {params.prefix_sim} --strategy wgs --genome {input.genome} \
+        --depth 3 --method errhmm --errhmm pbsim3/data/ERRHMM-SEQUEL.model \
+        --length-mean 1500 --pass-num 10 --seed {params.seed_id} 
     """
 
 rule run_sim_hap2:
@@ -125,10 +125,12 @@ rule run_sim_hap2:
     params:
        	seed_id = "{seeds}",
         prefix_sim = "{seeds}_{sample}_hap2/{seeds}_{sample}"
+    envmodules:
+        "pbsim3/3.0.0"
     shell: """
-    pbsim --prefix {params.prefix_sim} --strategy wgs --genome {input.genome} \
-    --depth 3 --method errhmm --errhmm pbsim3/data/ERRHMM-SEQUEL.model \
-    --length-mean 1500 --pass-num 10 --seed {params.seed_id} 
+        pbsim --prefix {params.prefix_sim} --strategy wgs --genome {input.genome} \
+        --depth 3 --method errhmm --errhmm pbsim3/data/ERRHMM-SEQUEL.model \
+        --length-mean 1500 --pass-num 10 --seed {params.seed_id} 
     """
 
 ## convert sam output from simulations to bam
@@ -222,6 +224,8 @@ rule RUN_BUSCO:
         out_dir="busco/",
         run_name=sample_prefix,
         lineage=LINEAGE
+    envmodules:
+        "busco/4.0.6"
     shell: """
         busco -m genome \
         -c {threads} \
