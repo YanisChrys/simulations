@@ -22,12 +22,14 @@ snakemake \
     --keep-going \
     --latency-wait 60 \
     --conda-frontend conda \
-    --cores ${THREADS} \
+    -j ${THREADS} \
     --verbose \
     --use-conda \
     --printshellcmds \
     --reason \
-    --nolock 
+    --use-envmodules \
+    --nolock \
+    --until run_sim_hap1
 #    --conda-create-envs-only \
 #    --rerun-triggers mtime
 #    --use-conda \

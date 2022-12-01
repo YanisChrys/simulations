@@ -1,7 +1,7 @@
 
 # path to seed hap 1 & 2
-SEED_HAP_1: DATA/rThaEle1.alt.cur.20190820.fasta.gz
-SEED_HAP_2: DATA/rThaEle1.alt.cur.20190820.fasta.gz
+SEED_HAP_1: DATA/rThaEle1.alt.cur.20190820.fasta
+SEED_HAP_2: DATA/rThaEle1.alt.cur.20190820.fasta
 
 # set up a different amount of cores for jobs that should run fewer than the rest of the analysis
 CORES: 50
