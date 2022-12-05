@@ -7,7 +7,7 @@ conda activate read_simulations
 conda config --add channels conda-forge
 conda config --add channels bioconda  
 conda config --add channels agbiome 
-conda install -y bbtools bbmap samtools pbccs hifiasm seqkit bbmap bwa bedtools r-essentials r-argparse r-ggplot2 picard r-scales r-viridis snakemake bcftools freebayes bam2fastx pairtools pairix r-base r-minpack.lm busco merqury openjdk=11
+conda install -y bbtools bbmap entrez-direct samtools pbccs hifiasm seqkit bbmap bwa bedtools r-essentials r-argparse r-ggplot2 picard r-scales r-viridis snakemake bcftools freebayes bam2fastx pairtools pairix r-base r-minpack.lm busco merqury openjdk=11
 ```
 
 ### pbsim3:

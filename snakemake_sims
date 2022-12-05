@@ -52,7 +52,7 @@ seed_list=[format(x, '02d') for x in range(1,21,1)]
 # samtools view path/to/fastafile | wc -l
 # and verify by making sure it matches the ncbi entry
 # keep all scaffolds because eventhough they may be unplaced they're still part of the genome
-CHROMS = ["%04d" % x for x in range(1,365)]
+CHROMS = ["%04d" % x for x in range(1,config["chrom_num"]+1)]
 
 ## create a haplotype list
 hap_list = ["hap1", "hap2"]
@@ -61,18 +61,53 @@ hap_list = ["hap1", "hap2"]
 sample_prefix=config["sample_prefix"]
 
 # path to seed hap 1 & 2
+# and to genomes to be used for contamination sims
 
-SEED_HAP_1=config["SEED_HAP_1"]
-SEED_HAP_2=config["SEED_HAP_2"]
+SEED_HAP_1=config["genomes"]["SEED_HAP_1"]
+SEED_HAP_2=config["genomes"]["SEED_HAP_2"]
+
 
 #busco db to use
 LINEAGE=config["LINEAGE"]
 
+#######################################
+
+# restrict wildcards to avoid smk confusion
 wildcard_constraints:
     haps="hap[0-9]+",
     seeds="[0-9]+",
-    chr_nm="[0-9]{4}"
+    chr_nm="[0-9]{4}",
+    cont="cont[0-9]+",
+    chrn1="[0-9]{4}",
+    chrn2="[0-9]{4}",
+    cont_file="cont[0-9]+_[0-9]{4}"
 
+#######################################
+
+# set up wildcards for contaminant DNA:
+# given we simulate 60X coverage, a 1% contamination (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3487130/)
+# would require total 6X contaminants in total
+# let's decide the amount of depth at random:
+
+cont1depth=round(random.uniform(0, 1)*6)
+cont2depth=1-cont1depth
+
+# to find genomes:
+# esearch -db nuccore -query "GCF_003018455.1" | efetch -format fasta > DATA/ecoli.fasta
+#  wget https://s3.amazonaws.com/genomeark/species/Homo_sapiens/mHomSap3/assembly_curated/mHomSap3.mat.cur.20200716.fasta.gz DATA/human/
+
+contaminant_1=config["genomes"]["contam1"]
+contaminant_2=config["genomes"]["contam2"]
+
+# count number of chromosomes for each file
+chromnum_cont1 = len([1 for line in open(contaminant_1) if line.startswith(">")])
+chromnum_cont1_list = ["%04d" % x for x in range(1,chromnum_cont1+1)]
+chromnum_cont2 = len([1 for line in open(contaminant_2) if line.startswith(">")])
+chromnum_cont2_list = ["%04d" % x for x in range(1,chromnum_cont2+1)]
+
+cont_prefix=expand("cont1_{chrn1}",chrn1=chromnum_cont1_list) + expand("cont2_{chrn2}",chrn2=chromnum_cont2_list)
+
+#######################################
 
 # example:
 # 01_SAMPLE_hap1/01_SAMPLE_0025
@@ -92,13 +127,17 @@ def output_looper(seed_name, pref, hap, cat=""):
 
 ## desired output after one full run
 
+#######################################
+
 rule all:
     input:
         expand("bam_files/{seeds}_{haps}_{sample}_{chr_nm}.bam", seeds=seed_list, haps=hap_list, chr_nm=CHROMS,sample=sample_prefix),
-        "stats/backmapping_stats.txt",
         expand("busco/{sample}/run_{db}/missing_busco_list.tsv",db=LINEAGE,sample=sample_prefix),
+        expand("fastq_files/{cont_file}.fastq.gz",cont_file=cont_prefix),
+        "stats/backmapping_stats.txt",
         "stats/assembly_stats.txt"
 
+#######################################
 
 ## Step 1: Simulate and reassemble reads for both haplotypes 
 ## simulate reads with pbsim, for different read lengths, one can adjust the length per read in
@@ -108,9 +147,9 @@ rule run_sim_hap1:
     input: 
         genome = SEED_HAP_1
     output:
-        bam = output_looper("{seeds}", "{sample}", hap=hap_list[0], cat="sam"),
-        ref = output_looper("{seeds}", "{sample}", hap=hap_list[0], cat="ref"),
-        maf = output_looper("{seeds}", "{sample}", hap=hap_list[0], cat="maf")
+        bam = temp(output_looper("{seeds}", "{sample}", hap=hap_list[0], cat="sam")),
+        ref = temp(output_looper("{seeds}", "{sample}", hap=hap_list[0], cat="ref")),
+        maf = temp(output_looper("{seeds}", "{sample}", hap=hap_list[0], cat="maf"))
     params:
        	seed_id = "{seeds}",
         prefix_sim = "{seeds}_{sample}_hap1/{seeds}_{sample}"
@@ -126,9 +165,9 @@ rule run_sim_hap2:
     input: 
         genome = SEED_HAP_2 ## fasta file was artificially mutated with SNPs and Indels
     output:
-        bam = output_looper("{seeds}", "{sample}", hap=hap_list[1], cat="sam"),
-        ref = output_looper("{seeds}", "{sample}", hap=hap_list[1], cat="ref"),
-        maf = output_looper("{seeds}", "{sample}", hap=hap_list[1], cat="maf")
+        bam = temp(output_looper("{seeds}", "{sample}", hap=hap_list[1], cat="sam")),
+        ref = temp(output_looper("{seeds}", "{sample}", hap=hap_list[1], cat="ref")),
+        maf = temp(output_looper("{seeds}", "{sample}", hap=hap_list[1], cat="maf"))
     params:
        	seed_id = "{seeds}",
         prefix_sim = "{seeds}_{sample}_hap2/{seeds}_{sample}"
@@ -158,19 +197,29 @@ rule run_ccs:
     output:
         fastq = "fastq_files/{seeds}_{hap}_{sample}_{chr_nm}.fastq.gz"
     shell:
-        "ccs {input.bam} {output.fastq} -j 30"
+        "ccs {input.bam} {output.fastq} -j 5"
+
+#######################################
+
+# do simulations for contaminants
+include: "rules/contamination_sims.smk"
+
+#######################################
 
 ## concatenate reads 
 
 rule cat_fastq:
     input:
-        fastq = expand("fastq_files/{seeds}_{hap}_{sample}_{chr_nm}.fastq.gz", seeds=seed_list, hap=hap_list, chr_nm=CHROMS,sample=sample_prefix) 
+        fastq = expand("fastq_files/{seeds}_{hap}_{sample}_{chr_nm}.fastq.gz", seeds=seed_list, hap=hap_list, chr_nm=CHROMS,sample=sample_prefix),
+        contam = expand("fastq_files/{cont_file}.fastq.gz",cont_file=cont_prefix)
     output:
         "fastq_files/all_pbsim.fastq.gz"
     shell:
-        "cat {input.fastq} > {output}"
+        "cat {input.fastq} {input.contam} > {output}"
 
 ## assemble with hifiasm using default parameters
+
+#######################################
 
 rule hifiasm_assembly:
     input:
@@ -183,6 +232,8 @@ rule hifiasm_assembly:
         inputpre="assembly/pbsim_asm"
     shell:
         "hifiasm --primary -l2 -t {threads} -o {params.inputpre} {input}"
+
+#######################################
 
 ## Step 2: Backmapping and stats
 
@@ -207,6 +258,7 @@ rule assembly_stats:
     shell:
         "seqkit stats -a -T {input} > {output}"
 
+#######################################
 
 # BUSCO Score
 
@@ -242,7 +294,7 @@ rule RUN_BUSCO:
         -l {params.lineage} \
         --offline
     """
-
+#######################################
 
 ## shred assembly into 150 bp long "reads" with 50 bp overlap, creating faux reads with overall 1.5 x coverage
 # in a conda environment you should be able to call shred.sh from the terminal like normal
