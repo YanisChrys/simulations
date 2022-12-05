@@ -1,13 +1,13 @@
-
 # path to seed hap 1 & 2
-SEED_HAP_1: DATA/rThaEle1.alt.cur.20190820.fasta
-SEED_HAP_2: DATA/rThaEle1.alt.cur.20190820.fasta
+# consider using bwa index and samtools faidx to index the files
+SEED_HAP_1: DATA/TaeGut/bTaeGut1.pri.cur.20210409.fasta
+SEED_HAP_2: DATA/TaeGut/bTaeGut1.alt.cur.20210409.fasta
 
 # set up a different amount of cores for jobs that should run fewer than the rest of the analysis
 CORES: 50
 
 #busco db to use
-LINEAGE: sauropsida_odb10
+LINEAGE: aves_odb10
 
-sample_prefix: rThaEle1
+sample_prefix: TaeGut
 
