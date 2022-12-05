@@ -33,6 +33,8 @@
 # changed awk command
 # removed module load, all programs should be in conda environment for reproducibility
 # adapted script to sg cluster with module and file location changes
+# add script for combining scaffolds to make simulations easier
+# add contamination (here from ecoli and human equalling 1%)
 
 import random
 import os
@@ -74,10 +76,10 @@ LINEAGE=config["LINEAGE"]
 
 # restrict wildcards to avoid smk confusion
 wildcard_constraints:
-    haps="hap[0-9]+",
+    haps="hap[0-9]",
     seeds="[0-9]+",
     chr_nm="[0-9]{4}",
-    cont="cont[0-9]+",
+    cont="cont[0-9]",
     chrn1="[0-9]{4}",
     chrn2="[0-9]{4}",
     cont_file="cont[0-9]_[0-9]{4}"
@@ -133,6 +135,8 @@ rule all:
     input:
         expand("bam_files/{seeds}_{haps}_{sample}_{chr_nm}.bam", seeds=seed_list, haps=hap_list, chr_nm=CHROMS,sample=sample_prefix),
         expand("busco/{sample}/run_{db}/missing_busco_list.tsv",db=LINEAGE,sample=sample_prefix),
+        expand("bam_files/cont1_{chrn1}.bam",chrn1=chromnum_cont1_list),
+        expand("bam_files/cont2_{chrn2}.bam",chrn2=chromnum_cont2_list),
         expand("fastq_files/{cont_file}.fastq.gz",cont_file=cont_prefix),
         "stats/backmapping_stats.txt",
         "stats/assembly_stats.txt"

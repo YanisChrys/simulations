@@ -56,15 +56,21 @@ rule run_sim_cont2:
     """
 
 
-rule make_bam_conta:
+rule make_bam_conta1:
     input:
-        sam1 = "cont1/cont1_{chrn1}.sam",
-        sam2 = "cont2/cont2_{chrn2}.sam"
+        sam1 = "cont1/cont1_{chrn1}.sam"
     output:
-        bam1 = expand("bam_files/cont1_{chrn1}.bam",chrn1=chromnum_cont1_list),
-        bam2 = expand("bam_files/cont2_{chrn2}.bam",chrn2=chromnum_cont2_list)
+        bam1 = "bam_files/cont1_{chrn1}.bam"
     shell: """
         samtools view -b {input.sam1} -o {output.bam1} --threads 30 
+    """
+
+rule make_bam_conta2:
+    input:
+        sam2 = "cont2/cont2_{chrn2}.sam"
+    output:
+        bam2 = "bam_files/cont2_{chrn2}.bam"
+    shell: """
         samtools view -b {input.sam2} -o {output.bam2} --threads 30
     """
 
