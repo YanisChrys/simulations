@@ -41,4 +41,4 @@ mv <folder> busco_downloads/lineages
 ```
 
 
-## Genomes to be used for assmeblies can be downloaded from [here](https://genomeark.github.io/vgp-curated-assembly/)
+## Genomes to be used for asseblies can be downloaded from [here](https://genomeark.github.io/vgp-curated-assembly/)
