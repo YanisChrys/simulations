@@ -80,7 +80,7 @@ wildcard_constraints:
     cont="cont[0-9]+",
     chrn1="[0-9]{4}",
     chrn2="[0-9]{4}",
-    cont_file="cont[0-9]+_[0-9]{4}"
+    cont_file="cont[0-9]_[0-9]{4}"
 
 #######################################
 
