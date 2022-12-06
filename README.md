@@ -1,4 +1,5 @@
 # simulations
+optimized for SGE cluster
 
 ## set up conda environment for simulations
 ```
@@ -29,6 +30,10 @@ qsub -pe smp 60 -q medium.q SGE_simulations.sh
 ```
 snakemake -s PATH/TO/SMKFILE/snakemake_sims --dag --forceall | dot -Tpdf > graph_of_jobs.pdf
 ```
+## Combine unplaced scaffolds into one entry to reduce number of output files
+`combineUnplaced.sh`
+takes each unplaced scaffold (hardcoded for vgp Taeniopygia guttata -- careful) and combine them by separating by 1000 Ns each time.
+
 ## BUSCO:
 
 For BUSCO, it is preferable to use it `offline`. To do that, download the desired dataset from [here](https://busco-data.ezlab.org/v5/data/lineages/), unpack and place in folder with:
@@ -41,4 +46,4 @@ mv <folder> busco_downloads/lineages
 ```
 
 
-## Genomes to be used for asseblies can be downloaded from [here](https://genomeark.github.io/vgp-curated-assembly/)
+### Genomes to be used for asseblies can be downloaded from [here](https://genomeark.github.io/vgp-curated-assembly/)
