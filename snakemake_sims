@@ -35,6 +35,7 @@
 # adapted script to sg cluster with module and file location changes
 # add script for combining scaffolds to make simulations easier
 # add contamination (here from ecoli and human equalling 1%)
+# add resouce_mem restrictions
 
 import random
 import os
@@ -159,6 +160,8 @@ rule run_sim_hap1:
         prefix_sim = "{seeds}_{sample}_hap1/{seeds}_{sample}"
     envmodules:
         "pbsim3/3.0.0"
+    resources:
+        mem_mb=100000
     shell: """
         pbsim --prefix {params.prefix_sim} --strategy wgs --genome {input.genome} \
         --depth 3 --method errhmm --errhmm /share/scientific_src/pbsim3/3.0.0/data/ERRHMM-SEQUEL.model \
@@ -200,6 +203,8 @@ rule run_ccs:
         bam = "bam_files/{seeds}_{hap}_{sample}_{chr_nm}.bam"
     output:
         fastq = "fastq_files/{seeds}_{hap}_{sample}_{chr_nm}.fastq.gz"
+    resources:
+        mem_mb=100000
     shell:
         "ccs {input.bam} {output.fastq} -j 5"
 

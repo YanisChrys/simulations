@@ -23,6 +23,7 @@ snakemake \
     --latency-wait 60 \
     --conda-frontend conda \
     -j ${THREADS} \
+    --resources mem_mb=500000 \
     --verbose \
     --use-conda \
     --printshellcmds \

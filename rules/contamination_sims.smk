@@ -31,6 +31,8 @@ rule run_sim_cont1:
         depth=cont1depth
     envmodules:
         "pbsim3/3.0.0"
+    resources:
+        mem_mb=100000
     shell: """
         pbsim --prefix {params.prefix_sim} --strategy wgs --genome {input.genome} \
         --depth {params.depth} --method errhmm --errhmm /share/scientific_src/pbsim3/3.0.0/data/ERRHMM-SEQUEL.model \
@@ -49,6 +51,8 @@ rule run_sim_cont2:
         depth=cont2depth
     envmodules:
         "pbsim3/3.0.0"
+    resources:
+        mem_mb=100000
     shell: """
         pbsim --prefix {params.prefix_sim} --strategy wgs --genome {input.genome} \
         --depth {params.depth} --method errhmm --errhmm /share/scientific_src/pbsim3/3.0.0/data/ERRHMM-SEQUEL.model \
@@ -75,11 +79,13 @@ rule make_bam_conta2:
     """
 
 ## get HiFi reads
-
+# set maximum resources for the rule
 rule run_ccs_conta:
     input:
         bam = "bam_files/{cont_file}.bam"
     output:
         fastq = "fastq_files/{cont_file}.fastq.gz"
+    resources:
+        mem_mb=100000
     shell:
         "ccs {input.bam} {output.fastq} -j 5"
