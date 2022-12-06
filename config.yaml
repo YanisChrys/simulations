@@ -16,3 +16,7 @@ LINEAGE: aves_odb10
 sample_prefix: TaeGut
 
 chrom_num: 41
+
+read_length: 3500
+
+depth: 0.75

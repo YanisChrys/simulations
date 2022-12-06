@@ -89,10 +89,10 @@ wildcard_constraints:
 
 # set up wildcards for contaminant DNA:
 # given we simulate 60X coverage, a 1% contamination (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3487130/)
-# would require total 6X contaminants in total
+# would require total 3X contaminants in total for a 30X 
 # let's decide the amount of depth at random:
 
-cont1depth=round(random.uniform(0, 1)*6)
+cont1depth=round(random.uniform(0, 1)*3)
 cont2depth=1-cont1depth
 
 # to find genomes:
@@ -157,15 +157,17 @@ rule run_sim_hap1:
         maf = temp(output_looper("{seeds}", "{sample}", hap=hap_list[0], cat="maf"))
     params:
        	seed_id = "{seeds}",
-        prefix_sim = "{seeds}_{sample}_hap1/{seeds}_{sample}"
+        prefix_sim = "{seeds}_{sample}_hap1/{seeds}_{sample}",
+        lngth = config["read_length"],
+        dpth = config["depth"]
     envmodules:
         "pbsim3/3.0.0"
     resources:
         mem_mb=100000
     shell: """
         pbsim --prefix {params.prefix_sim} --strategy wgs --genome {input.genome} \
-        --depth 3 --method errhmm --errhmm /share/scientific_src/pbsim3/3.0.0/data/ERRHMM-SEQUEL.model \
-        --length-mean 1500 --pass-num 10 --seed {params.seed_id} 
+        --depth {params.dpth} --method errhmm --errhmm /share/scientific_src/pbsim3/3.0.0/data/ERRHMM-SEQUEL.model \
+        --length-mean {params.lngth} --pass-num 10 --seed {params.seed_id} 
     """
 
 rule run_sim_hap2:
@@ -177,13 +179,15 @@ rule run_sim_hap2:
         maf = temp(output_looper("{seeds}", "{sample}", hap=hap_list[1], cat="maf"))
     params:
        	seed_id = "{seeds}",
-        prefix_sim = "{seeds}_{sample}_hap2/{seeds}_{sample}"
+        prefix_sim = "{seeds}_{sample}_hap2/{seeds}_{sample}",
+        lngth = config["read_length"],
+        dpth = config["depth"]
     envmodules:
         "pbsim3/3.0.0"
     shell: """
         pbsim --prefix {params.prefix_sim} --strategy wgs --genome {input.genome} \
-        --depth 3 --method errhmm --errhmm /share/scientific_src/pbsim3/3.0.0/data/ERRHMM-SEQUEL.model \
-        --length-mean 1500 --pass-num 10 --seed {params.seed_id} 
+        --depth {params.dpth} --method errhmm --errhmm /share/scientific_src/pbsim3/3.0.0/data/ERRHMM-SEQUEL.model \
+        --length-mean {params.lngth} --pass-num 10 --seed {params.seed_id} 
     """
 
 ## convert sam output from simulations to bam
