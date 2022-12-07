@@ -3,20 +3,20 @@
 def cont1_looper(cat=""):
     for i in chromnum_cont1_list:
         if cat == "maf":
-            yield "cont1/cont1_{}.maf".format(i)
+            yield "/share/pool/simulations_collomics/cont1/cont1_{}.maf".format(i)
         elif cat == "ref":
-            yield "cont1/cont1_{}.ref".format(i)
+            yield "/share/pool/simulations_collomics/cont1/cont1_{}.ref".format(i)
         elif cat == "sam":
-            yield "cont1/cont1_{}.sam".format(i)
+            yield "/share/pool/simulations_collomics/cont1/cont1_{}.sam".format(i)
 
 def cont2_looper(cat=""):
     for i in chromnum_cont2_list:
         if cat == "maf":
-            yield "cont2/cont2_{}.maf".format(i)
+            yield "/share/pool/simulations_collomics/cont2/cont2_{}.maf".format(i)
         elif cat == "ref":
-            yield "cont2/cont2_{}.ref".format(i)
+            yield "/share/pool/simulations_collomics/cont2/cont2_{}.ref".format(i)
         elif cat == "sam":
-            yield "cont2/cont2_{}.sam".format(i)
+            yield "/share/pool/simulations_collomics/cont2/cont2_{}.sam".format(i)
 
 
 rule run_sim_cont1:
@@ -27,7 +27,7 @@ rule run_sim_cont1:
         ref = temp(cont1_looper(cat="ref")),
         maf = temp(cont1_looper(cat="maf"))
     params:
-        prefix_sim = "cont1/cont1",
+        prefix_sim = "/share/pool/simulations_collomics/cont1/cont1",
         depth=cont1depth,
         lngth = config["read_length"]
     envmodules:
@@ -48,7 +48,7 @@ rule run_sim_cont2:
         ref = temp(cont2_looper(cat="ref")),
         maf = temp(cont2_looper(cat="maf"))
     params:
-        prefix_sim = "cont2/cont2",
+        prefix_sim = "/share/pool/simulations_collomics/cont2/cont2",
         depth=cont2depth,
         lngth = config["read_length"]
     envmodules:
@@ -64,7 +64,7 @@ rule run_sim_cont2:
 
 rule make_bam_conta1:
     input:
-        sam1 = "cont1/cont1_{chrn1}.sam"
+        sam1 = "/share/pool/simulations_collomics/cont1/cont1_{chrn1}.sam"
     output:
         bam1 = "bam_files/cont1_{chrn1}.bam"
     shell: """
@@ -73,7 +73,7 @@ rule make_bam_conta1:
 
 rule make_bam_conta2:
     input:
-        sam2 = "cont2/cont2_{chrn2}.sam"
+        sam2 = "/share/pool/simulations_collomics/cont2/cont2_{chrn2}.sam"
     output:
         bam2 = "bam_files/cont2_{chrn2}.bam"
     shell: """

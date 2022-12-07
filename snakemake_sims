@@ -36,6 +36,7 @@
 # add script for combining scaffolds to make simulations easier
 # add contamination (here from ecoli and human equalling 1%)
 # add resouce_mem restrictions
+# save larger files to specific folder "share/pool" to be on the safe side
 
 import random
 import os
@@ -122,11 +123,11 @@ cont_prefix=expand("cont1_{chrn1}",chrn1=chromnum_cont1_list) + expand("cont2_{c
 def output_looper(seed_name, pref, hap, cat=""):
     for i in CHROMS:
         if cat == "maf":
-            yield "{0}_{1}_{2}/{0}_{1}_{3}.maf".format(seed_name, pref, hap, i)
+            yield "/share/pool/simulations_collomics/{0}_{1}_{2}/{0}_{1}_{3}.maf".format(seed_name, pref, hap, i)
         elif cat == "ref":
-            yield "{0}_{1}_{2}/{0}_{1}_{3}.ref".format(seed_name, pref, hap, i)
+            yield "/share/pool/simulations_collomics/{0}_{1}_{2}/{0}_{1}_{3}.ref".format(seed_name, pref, hap, i)
         elif cat == "sam":
-            yield "{0}_{1}_{2}/{0}_{1}_{3}.sam".format(seed_name, pref, hap, i)
+            yield "/share/pool/simulations_collomics/{0}_{1}_{2}/{0}_{1}_{3}.sam".format(seed_name, pref, hap, i)
 
 ## desired output after one full run
 
@@ -157,7 +158,7 @@ rule run_sim_hap1:
         maf = temp(output_looper("{seeds}", "{sample}", hap=hap_list[0], cat="maf"))
     params:
        	seed_id = "{seeds}",
-        prefix_sim = "{seeds}_{sample}_hap1/{seeds}_{sample}",
+        prefix_sim = "/share/pool/simulations_collomics/{seeds}_{sample}_hap1/{seeds}_{sample}",
         lngth = config["read_length"],
         dpth = config["depth"]
     envmodules:
@@ -179,7 +180,7 @@ rule run_sim_hap2:
         maf = temp(output_looper("{seeds}", "{sample}", hap=hap_list[1], cat="maf"))
     params:
        	seed_id = "{seeds}",
-        prefix_sim = "{seeds}_{sample}_hap2/{seeds}_{sample}",
+        prefix_sim = "/share/pool/simulations_collomics/{seeds}_{sample}_hap2/{seeds}_{sample}",
         lngth = config["read_length"],
         dpth = config["depth"]
     envmodules:
@@ -194,7 +195,7 @@ rule run_sim_hap2:
 
 rule make_bam:
     input:
-        sam = "{seeds}_{sample}_{hap}/{seeds}_{sample}_{chr_nm}.sam"
+        sam = "/share/pool/simulations_collomics/{seeds}_{sample}_{hap}/{seeds}_{sample}_{chr_nm}.sam"
     output:
         bam = "bam_files/{seeds}_{hap}_{sample}_{chr_nm}.bam"
     shell:
