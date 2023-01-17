@@ -7,10 +7,9 @@
 #$ -M i.chrysostomakis@leibniz-lib.de
 #$ -m beas
 
-# qsub -pe smp 60 -q medium.q SGE_genome_assembly.sh
+# qsub -pe smp 60 -q medium.q SGE_simulations.sh 
 
 module load anaconda3/2022.05
-
 conda activate read_simulations
 
 #one core will be used by snakemake to monitor the other processes
@@ -21,16 +20,18 @@ snakemake \
     --snakefile snakemake_sims \
     --keep-going \
     --latency-wait 60 \
-    --conda-frontend conda \
     -j ${THREADS} \
     --resources mem_mb=500000 \
     --verbose \
+    --use-envmodules \
     --use-conda \
     --printshellcmds \
     --reason \
-    --use-envmodules \
-    --nolock \
-    --until run_sim_hap1
+    --nolock 
+
+
+#    --until run_sim_hap1
+#    --conda-frontend conda \
 #    --conda-create-envs-only \
 #    --rerun-triggers mtime
 #    --use-conda \
