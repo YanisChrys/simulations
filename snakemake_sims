@@ -3,22 +3,18 @@
 # yanis todo:
 # todo: fix folder system for version that will be made available to public/published so it agrees with:
 # https://snakemake.readthedocs.io/en/stable/snakefiles/deployment.html
-# use deepconsensus
-# simulations:
-# simlord / conda
-# pass module
 # simngs, wgsim
 # yaahs - juicer \ module
 # blocktools / conda
 # how to simulate diploid genome? alt assembly or mutation simulator?
-# add megahit, busco
+# add megahit
 # assemblers { 
-# pb-falcon / pb-assembly / conda
-# peregrine-2021 / conda
+# pb-falcon / pb-assembly
+# peregrine-2021
 # trio-binning
 # dipasm
-# hi-canu / conda as canu
-# ipa \ conda pbipa
+# hi-canu / conda as canu }
+# ipa \ conda pbipa 
 # benchamrking for hifi assembler: 
 # https://www.biorxiv.org/content/10.1101/2022.02.15.480579v1.full
 # add plotting and statistics summaries
@@ -213,6 +209,7 @@ rule make_bam:
 
 ## get HiFi reads
 
+# if we want deep_consensus replace this rule with the code inside deepconsensus.smk
 rule run_ccs:
     input:
         bam = "bam_files/{seeds}_{hap}_{sample}_{chr_nm}.bam"
@@ -229,6 +226,7 @@ rule run_ccs:
 include: "rules/contamination_sims.smk"
 
 #######################################
+
 
 ## concatenate reads 
 
