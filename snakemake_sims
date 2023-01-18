@@ -103,7 +103,7 @@ wildcard_constraints:
 # so we want a scenario where more than 50% of contamination comes from bacteria (cont 1)
 
 rcd=config["depth"]*20*2/0.95 - config["depth"]*20*2
-cont1depth=round(random.uniform(0.5, 1)*rcd)
+cont1depth=round(random.uniform(0.5, 1)*rcd,3)
 cont2depth=1-cont1depth
 
 # to find genomes:
