@@ -1,0 +1,8 @@
+name: soapdenovo2
+channels:
+  - biobuilds
+  - conda-forge
+  - bioconda
+dependencies:
+  - bbmap==39.01
+  - soapdenovo2

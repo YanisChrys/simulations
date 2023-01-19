@@ -1,0 +1,8 @@
+name: megahit
+channels:
+  - biobuilds
+  - conda-forge
+  - bioconda
+dependencies:
+  - bbmap==39.01
+  - megahit==1.2.9

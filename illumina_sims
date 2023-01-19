@@ -1,6 +1,19 @@
 
+REF_GENOME="DATA/TaeGut/bTaeGut1.pri.final.fasta"
 
-/bbmap/randomreads.sh -Xmx50g ref=ref.fa out1=sim_1.fastq out2=sim_2.fastq coverage=100 addpairnum=t minlength=125 maxlength=175 paired=t mininsert=490 maxinsert=520
+rule bbmap:
+    input:
+        sam = REF_GENOME
+    output:
+        sim1="illumina_results/bbmap/sim1.fastq"
+        sim2="illumina_results/bbmap/sim2.fastq"
+    shell: """
+        /bbmap/randomreads.sh -Xmx50g \
+        ref= {input.ref} \
+        out1={output.sim1} \
+        out2={output.sim2} \
+        coverage=100 addpairnum=t minlength=125 maxlength=175 paired=t mininsert=490 maxinsert=520
+    """
 
 # fastqc / conda
 # trim: trimmomatic: / conda
@@ -19,4 +32,81 @@
 # Mauve, InGAP-SV, 
 # https://anaconda.org/bioconda/gapfiller
 # 
-/MEGAHIT-1.2.9-Linux-x86_64-static/bin/megahit -1 sim_1.fastq -2 sim_1.fastq -o ./sim_assembly -t 40
+
+rule megahit:
+    input:
+        sim1="illumina_results/bbmap/sim1.fastq"
+        sim2="illumina_results/bbmap/sim2.fastq"
+    output:
+        "./megahit_sim_assembly"
+    threads:
+        workflow.cores
+    conda:
+        "envs/megahit.yml"
+    shell: """
+        megahit \
+        -1 {input.sim1} \
+        -2 {input.sim2} \
+        -o {output} \
+        -t {threads}
+"""
+
+#####
+
+rule spades:
+    input:
+        sim1="illumina_results/bbmap/sim1.fastq"
+        sim2="illumina_results/bbmap/sim2.fastq"
+    output:
+        "./megahit_sim_assembly"
+    threads:
+        workflow.cores
+    conda:
+        "envs/spades.yml"
+    shell: """
+        megahit \
+        -1 {input.sim1} \
+        -2 {input.sim2} \
+        -o {output} \
+        -t {threads}
+"""
+
+
+rule soapdenovo2:
+    input:
+        sim1="illumina_results/bbmap/sim1.fastq"
+        sim2="illumina_results/bbmap/sim2.fastq"
+    output:
+        "./megahit_sim_assembly"
+    threads:
+        workflow.cores
+    conda:
+        "envs/soapdenovo.yml"
+    shell: """
+        megahit \
+        -1 {input.sim1} \
+        -2 {input.sim2} \
+        -o {output} \
+        -t {threads}
+"""
+
+rule allpathslg:
+    input:
+        sim1="illumina_results/bbmap/sim1.fastq"
+        sim2="illumina_results/bbmap/sim2.fastq"
+    output:
+        "./megahit_sim_assembly"
+    threads:
+        workflow.cores
+    conda:
+        "envs/allpaths.yml"
+    shell: """
+        megahit \
+        -1 {input.sim1} \
+        -2 {input.sim2} \
+        -o {output} \
+        -t {threads}
+"""
+
+fastqc
+trimmomatic

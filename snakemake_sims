@@ -17,7 +17,7 @@
 # ipa \ conda pbipa 
 # benchamrking for hifi assembler: 
 # https://www.biorxiv.org/content/10.1101/2022.02.15.480579v1.full
-# add plotting and statistics summaries
+
 
 
 ######### Changes #########
@@ -99,9 +99,15 @@ wildcard_constraints:
 # so we want a scenario where more than 50% of contamination comes from bacteria (cont 1)
 
 rcd=config["depth"]*20*2/0.95 - config["depth"]*20*2
-cont1depth=round(random.uniform(0.5, 1)*rcd,3)
-cont2depth=1-cont1depth
 
+# percentage of bacterial and human contamination
+# as a proportion of the total contamination
+cont1_percent=round(random.uniform(0.5, 1),3)
+cont2_percent=1-cont1_percent
+
+# depth number to be used by pbsim
+cont1depth=cont1_percent*rcd
+cont2depth=cont2_percent*rcd
 # to find genomes:
 # esearch -db nuccore -query "GCF_003018455.1" | efetch -format fasta > DATA/ecoli.fasta
 #  wget https://s3.amazonaws.com/genomeark/species/Homo_sapiens/mHomSap3/assembly_curated/mHomSap3.mat.cur.20200716.fasta.gz DATA/human/
@@ -147,7 +153,8 @@ rule all:
         expand("bam_files/cont2_{chrn2}.bam",chrn2=chromnum_cont2_list),
         expand("fastq_files/{cont_file}.fastq.gz",cont_file=cont_prefix),
         "stats/backmapping_stats.txt",
-        "stats/assembly_stats.txt"
+        "stats/assembly_stats.txt",
+        "stats/read_stats.txt"
 
 #######################################
 
@@ -373,6 +380,11 @@ rule backmapping_stats:
 
 
 
-
-
+rule read_stats:
+    input:
+        "fastq_files/all_pbsim.fastq.gz"
+    output:
+        "stats/read_stats.txt"
+    shell:
+        "seqkit stats -a -T {input} > {output}"
 

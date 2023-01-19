@@ -1,0 +1,8 @@
+name: allpathslg
+channels:
+  - biobuilds
+  - conda-forge
+  - bioconda
+dependencies:
+  - bbmap==39.01
+  - allpathslg
