@@ -254,7 +254,7 @@ rule hifiasm_assembly:
     input:
         "fastq_files/all_pbsim.fastq.gz"
     output:
-        "assembly/pbsim_asm.bp.p_ctg.gfa"
+        "assembly/pbsim_asm.p_ctg.gfa"
     threads:
         workflow.cores
     params:
@@ -270,9 +270,9 @@ rule hifiasm_assembly:
 
 rule gfa_to_fa:
     input:
-        "assembly/pbsim_asm.bp.p_ctg.gfa"
+        "assembly/pbsim_asm.p_ctg.gfa"
     output:
-        "assembly/pbsim_asm.bp.p_ctg.fa"
+        "assembly/pbsim_asm.p_ctg.fa"
     shell: """
         awk '/^S/{{print ">"$2;print $3}}' {input} > {output}
     """
