@@ -30,11 +30,12 @@ rule run_sim_cont1:
         prefix_sim = "/share/pool/simulations_collomics/cont1/cont1",
         depth=cont1depth,
         lngth = config["read_length"]
-    envmodules:
-        "pbsim3/3.0.0"
+#    envmodules:
+#        "pbsim3/3.0.0"
     resources:
         mem_mb=100000
     shell: """
+        module load pbsim3/3.0.0
         pbsim --prefix {params.prefix_sim} --strategy wgs --genome {input.genome} \
         --depth {params.depth} --method errhmm --errhmm /share/scientific_src/pbsim3/3.0.0/data/ERRHMM-SEQUEL.model \
         --length-mean {params.lngth} --pass-num 10
@@ -51,11 +52,12 @@ rule run_sim_cont2:
         prefix_sim = "/share/pool/simulations_collomics/cont2/cont2",
         depth=cont2depth,
         lngth = config["read_length"]
-    envmodules:
-        "pbsim3/3.0.0"
+#    envmodules:
+#        "pbsim3/3.0.0"
     resources:
         mem_mb=100000
     shell: """
+        module load pbsim3/3.0.0
         pbsim --prefix {params.prefix_sim} --strategy wgs --genome {input.genome} \
         --depth {params.depth} --method errhmm --errhmm /share/scientific_src/pbsim3/3.0.0/data/ERRHMM-SEQUEL.model \
         --length-mean {params.lngth} --pass-num 10

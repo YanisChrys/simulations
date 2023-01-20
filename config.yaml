@@ -8,7 +8,7 @@ genomes:
   contam2: DATA/human/humanmat.fasta
 
 # set up a different amount of cores for jobs that should run fewer than the rest of the analysis
-CORES: 50
+CORES: 5
 
 #busco db to use
 LINEAGE: aves_odb10

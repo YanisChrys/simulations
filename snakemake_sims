@@ -174,11 +174,12 @@ rule run_sim_hap1:
         prefix_sim = "/share/pool/simulations_collomics/{seeds}_{sample}_hap1/{seeds}_{sample}",
         lngth = config["read_length"],
         dpth = config["depth"]
-    envmodules:
-        "pbsim3/3.0.0"
+#    envmodules:
+#        "pbsim3/3.0.0"
     resources:
         mem_mb=100000
     shell: """
+        module load pbsim3/3.0.0
         pbsim --prefix {params.prefix_sim} --strategy wgs --genome {input.genome} \
         --depth {params.dpth} --method errhmm --errhmm /share/scientific_src/pbsim3/3.0.0/data/ERRHMM-SEQUEL.model \
         --length-mean {params.lngth} --pass-num 10 --seed {params.seed_id} 
@@ -196,9 +197,12 @@ rule run_sim_hap2:
         prefix_sim = "/share/pool/simulations_collomics/{seeds}_{sample}_hap2/{seeds}_{sample}",
         lngth = config["read_length"],
         dpth = config["depth"]
-    envmodules:
-        "pbsim3/3.0.0"
+#    envmodules:
+#        "pbsim3/3.0.0"
+    resources:
+        mem_mb=100000
     shell: """
+        module load pbsim3/3.0.0
         pbsim --prefix {params.prefix_sim} --strategy wgs --genome {input.genome} \
         --depth {params.dpth} --method errhmm --errhmm /share/scientific_src/pbsim3/3.0.0/data/ERRHMM-SEQUEL.model \
         --length-mean {params.lngth} --pass-num 10 --seed {params.seed_id} 
@@ -281,7 +285,7 @@ rule gfa_to_fa:
 
 rule assembly_stats:
     input:
-        "assembly/pbsim_asm.bp.p_ctg.fa"
+        "assembly/pbsim_asm.p_ctg.fa"
     output:
         "stats/assembly_stats.txt"
     shell:
@@ -301,7 +305,7 @@ rule assembly_stats:
 #tetrapoda_odb9
 rule RUN_BUSCO:
     input:
-        "assembly/pbsim_asm.bp.p_ctg.fa"
+        "assembly/pbsim_asm.p_ctg.fa"
     output:
         "busco/{sample}/run_{db}/missing_busco_list.tsv"
     threads:
@@ -329,7 +333,7 @@ rule RUN_BUSCO:
 # in a conda environment you should be able to call shred.sh from the terminal like normal
 rule backmapping_shredding:
     input:
-        "assembly/pbsim_asm.bp.p_ctg.fa"
+        "assembly/pbsim_asm.p_ctg.fa"
     output:
         "split_assembly/split_assembly.fa"
     shell:
@@ -346,7 +350,7 @@ rule backmapping_mapping:
     threads:
         config["CORES"]
     shell:
-        "bwa mem {input.genome} {input.asm} -t {threads} > {output}""hap2"
+        "bwa mem {input.genome} {input.asm} -t {threads} > {output}"
 
 ## convert sam to bam
 
