@@ -1,0 +1,7 @@
+name: bbtools
+channels:
+  - bioconda
+  - agbiome 
+dependencies:
+  - bbmap==39.01
+  - bbtools

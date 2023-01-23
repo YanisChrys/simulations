@@ -228,6 +228,8 @@ rule run_ccs:
         fastq = "fastq_files/{seeds}_{hap}_{sample}_{chr_nm}.fastq.gz"
     resources:
         mem_mb=100000
+    conda:
+        "envs/ccs.yml"
     shell:
         "ccs {input.bam} {output.fastq} -j 5"
 
@@ -263,6 +265,8 @@ rule hifiasm_assembly:
         workflow.cores
     params:
         inputpre="assembly/pbsim_asm"
+    conda:
+        "envs/hifiasm.yml"
     shell:
         "hifiasm --primary -l2 -t {threads} -o {params.inputpre} {input}"
 
@@ -315,8 +319,8 @@ rule RUN_BUSCO:
         out_dir="busco/",
         run_name=sample_prefix,
         lineage=LINEAGE
-    envmodules:
-        "busco/4.0.6"
+    conda:
+        "envs/busco.yml"
     shell: """
         busco -m genome \
         -c {threads} \
@@ -336,6 +340,8 @@ rule backmapping_shredding:
         "assembly/pbsim_asm.p_ctg.fa"
     output:
         "split_assembly/split_assembly.fa"
+    conda:
+        "envs/bbtools.yml"
     shell:
         "shred.sh -Xmx10g in={input} out={output} length=150 minlength=10 overlap=50"
 
@@ -349,6 +355,8 @@ rule backmapping_mapping:
         temp("split_assembly/backmapped.sam")
     threads:
         config["CORES"]
+    conda:
+        "envs/bwa.yml"
     shell:
         "bwa mem {input.genome} {input.asm} -t {threads} > {output}"
 
@@ -389,6 +397,8 @@ rule read_stats:
         "fastq_files/all_pbsim.fastq.gz"
     output:
         "stats/read_stats.txt"
+    conda:
+        "envs/seqkit.yml"
     shell:
         "seqkit stats -a -T {input} > {output}"
 

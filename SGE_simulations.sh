@@ -27,12 +27,13 @@ snakemake \
     --use-conda \
     --printshellcmds \
     --reason \
-    --nolock 
+    --nolock \
+    --conda-frontend conda \
+    --until run_sim_hap1
 
 
 #    --until run_sim_hap1
-#    --conda-frontend conda \
-#    --conda-create-envs-only \
+
 #    --rerun-triggers mtime
 #    --use-conda \
 #    --use-envmodules \

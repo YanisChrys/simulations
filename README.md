@@ -5,21 +5,31 @@ optimized for SGE cluster
 ```
 conda create --name read_simulations
 conda activate read_simulations
-conda config --add channels conda-forge
-conda config --add channels bioconda  
-conda config --add channels agbiome 
-conda install -y bbtools bbmap entrez-direct samtools pbccs hifiasm seqkit bbmap bwa bedtools r-essentials r-argparse r-ggplot2 picard r-scales r-viridis snakemake bcftools freebayes bam2fastx pairtools pairix r-base r-minpack.lm busco merqury openjdk=11
+conda install mamba
+mamba install samtools pbccs bwa bedtools picard snakemake bcftools freebayes
 ```
 
 ### pbsim3:
 
-Install as module (or whichever method is best for your system) from the github [repo](https://github.com/yukiteruono/pbsim3/releases/tag/v3.0.0)
+Install as module (or whichever method is best for your system) from the [github repo](https://github.com/yukiteruono/pbsim3/releases/tag/v3.0.0)
 
 ### Do a dry run on 5 cores with:
 ```
 snakemake -s snakemake_sims --dry-run --cores 5 -p -r -w 5 --verbose
 ```
 
+## install packages:
+
+```
+snakemake \
+    --snakefile snakemake_sims \
+    -j 5 \
+    --use-envmodules \
+    --use-conda \
+    --conda-frontend conda \
+    --set channel_priority strict
+    --conda-create-envs-only 
+```
 
 ### Run on SGE cluster with 60 cores with:
 ```

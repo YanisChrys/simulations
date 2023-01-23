@@ -1,0 +1,14 @@
+name: read_simulations
+channels:
+  - anaconda
+  - bioconda
+dependencies:
+  - bedtools==2.30.0
+  - bcftools==1.9
+  - samtools==1.9
+  - snakemake==3.6.1
+
+ 
+ 
+mamba env create -f envs/read_simulations.yml 
+

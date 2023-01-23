@@ -1,0 +1,5 @@
+name: ccs
+channels:
+  - bioconda 
+dependencies:
+  - pbccs==6.4.0
