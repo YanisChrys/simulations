@@ -20,7 +20,7 @@ snakemake -s snakemake_sims --dry-run --cores 5 -p -r -w 5 --verbose
 ```
 
 ## install packages:
-
+The packages to be used by single rules need to be installed beforehand
 ```
 snakemake \
     --snakefile snakemake_sims \
