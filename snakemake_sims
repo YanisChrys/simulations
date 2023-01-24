@@ -20,6 +20,7 @@
 
 import random
 import os
+from decimal import *
 
 # CONFIG
 # for i in range(0,10):
@@ -84,16 +85,23 @@ wildcard_constraints:
 # assuming that if there is contamination the amount of bacterial cont. will be higher than the human cont. 
 # so we want a scenario where more than 50% of contamination comes from bacteria (cont 1)
 
-rcd=config["depth"]*20*2/0.95 - config["depth"]*20*2
+# because of how python subtraction/ath works, to get a round up math expression you need the decimal package
+# to do subtraction that is rounded down to the last 3 digits use:
+getcontext().prec = 3
+rcd=float(Decimal(config["depth"]*20*2/0.95) - Decimal(config["depth"]*20*2))
 
 # percentage of bacterial and human contamination
 # as a proportion of the total contamination
-cont1_percent=round(random.uniform(0.5, 1),3)
-cont2_percent=1-cont1_percent
+# don't allow a value of 0, ie 0 depth for either species
+cont1_percent=round(random.uniform(0.5, 0.9999),3)
 
-# depth number to be used by pbsim
-cont1depth=cont1_percent*rcd
-cont2depth=cont2_percent*rcd
+cont2_percent=float(Decimal(1) - Decimal(cont1_percent))
+
+# depth number to be used by pbsim, round up to 2 digits
+cont1depth=round(cont1_percent*rcd,2)
+cont2depth=round(cont2_percent*rcd,2)
+
+
 # to find genomes:
 # esearch -db nuccore -query "GCF_003018455.1" | efetch -format fasta > DATA/ecoli.fasta
 #  wget https://s3.amazonaws.com/genomeark/species/Homo_sapiens/mHomSap3/assembly_curated/mHomSap3.mat.cur.20200716.fasta.gz DATA/human/
@@ -346,7 +354,7 @@ rule backmapping_mapping:
     conda:
         "envs/bwa.yml"
     shell: """
-        bwa index {input.genome}
+        # bwa index {input.genome}
         bwa mem {input.genome} {input.asm} -t {threads} > {output}
     """
 

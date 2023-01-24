@@ -79,6 +79,7 @@ rule make_bam_conta2:
     output:
         bam2 = temp("%s/bam_files/cont2_{chrn2}.bam" %READ_LENGTH)
     shell: """
+        module load samtools/1.10
         samtools view -b {input.sam2} -o {output.bam2} --threads 30
     """
 
