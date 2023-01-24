@@ -7,6 +7,7 @@ conda create --name read_simulations
 conda activate read_simulations
 conda install mamba
 mamba install samtools pbccs bwa bedtools picard snakemake bcftools freebayes
+#conda env create -f envs/read_simulations.yml
 ```
 
 ### pbsim3:
