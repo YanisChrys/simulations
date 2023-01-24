@@ -252,7 +252,7 @@ rule hifiasm_assembly:
     threads:
         workflow.cores
     params:
-        inputpre="assembly/pbsim_asm"
+        inputpre="%s/assembly/pbsim_asm" %READ_LENGTH
     conda:
         "envs/hifiasm.yml"
     shell:
