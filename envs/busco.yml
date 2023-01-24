@@ -2,5 +2,6 @@ name: busco_sims
 channels:
   - bioconda
 dependencies:
-  - busco==5.4.4
-  - entrez-direct==16.2
+  - busco
+  - entrez-direct
+

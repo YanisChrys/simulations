@@ -1,5 +1,5 @@
 # path to seed hap 1 & 2
-# consider using bwa index and samtools faidx to index the files
+# IMPORTANT: use bwa index and samtools faidx to index the files
 #https://www.biostars.org/p/12417/
 genomes:
   SEED_HAP_1: DATA/TaeGut/bTaeGut1.pri.final.fasta
@@ -15,6 +15,7 @@ LINEAGE: aves_odb10
 
 sample_prefix: TaeGut
 
+# IMPORTANT: find this number with: samtools view path/to/fastafile | wc -l
 chrom_num: 41
 
 read_length: 3500

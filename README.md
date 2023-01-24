@@ -6,8 +6,7 @@ optimized for SGE cluster
 conda create --name read_simulations
 conda activate read_simulations
 conda install mamba
-mamba install samtools pbccs bwa bedtools picard snakemake bcftools freebayes
-#conda env create -f envs/read_simulations.yml
+mamba install -c conda-forge -c bioconda snakemake seqkit
 ```
 
 ### pbsim3:
@@ -21,14 +20,14 @@ snakemake -s snakemake_sims --dry-run --cores 5 -p -r -w 5 --verbose
 
 ## install packages:
 The packages to be used by single rules need to be installed beforehand
-```
+Due to dependency conflicts, most programs, if they are to be used with conda, have to be installed as separate packages
+If mamba isn't available from where you run this include the following option as well:
+`--conda-frontend conda `
 snakemake \
     --snakefile snakemake_sims \
     -j 5 \
     --use-envmodules \
     --use-conda \
-    --conda-frontend conda \
-    --set channel_priority strict
     --conda-create-envs-only 
 ```
 
@@ -41,6 +40,7 @@ qsub -pe smp 60 -q medium.q SGE_simulations.sh
 ```
 snakemake -s PATH/TO/SMKFILE/snakemake_sims --dag --forceall | dot -Tpdf > graph_of_jobs.pdf
 ```
+
 ## Combine unplaced scaffolds into one entry to reduce number of output files
 `combineUnplaced.sh`
 takes each unplaced scaffold (hardcoded for vgp Taeniopygia guttata -- careful) and combine them by separating by 1000 Ns each time.

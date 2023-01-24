@@ -68,7 +68,7 @@ rule make_bam_conta1:
     input:
         sam1 = "/share/pool/simulations_collomics/cont1/cont1_{chrn1}.sam"
     output:
-        bam1 = "bam_files/cont1_{chrn1}.bam"
+        bam1 = temp("%s/bam_files/cont1_{chrn1}.bam" %READ_LENGTH)
     shell: """
         samtools view -b {input.sam1} -o {output.bam1} --threads 30 
     """
@@ -77,7 +77,7 @@ rule make_bam_conta2:
     input:
         sam2 = "/share/pool/simulations_collomics/cont2/cont2_{chrn2}.sam"
     output:
-        bam2 = "bam_files/cont2_{chrn2}.bam"
+        bam2 = temp("%s/bam_files/cont2_{chrn2}.bam" %READ_LENGTH)
     shell: """
         samtools view -b {input.sam2} -o {output.bam2} --threads 30
     """
@@ -86,9 +86,9 @@ rule make_bam_conta2:
 # set maximum resources for the rule
 rule run_ccs_conta:
     input:
-        bam = "bam_files/{cont_file}.bam"
+        bam = "%s/bam_files/{cont_file}.bam" %READ_LENGTH
     output:
-        fastq = "fastq_files/{cont_file}.fastq.gz"
+        fastq = temp("%s/fastq_files/{cont_file}.fastq.gz" %READ_LENGTH)
     resources:
         mem_mb=100000
     shell:

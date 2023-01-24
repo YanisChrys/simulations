@@ -9,3 +9,5 @@ dependencies:
   - snakemake
   - seqkit==2.3.1
 
+
+mamba create -c conda-forge -c bioconda -n snakemake snakemake

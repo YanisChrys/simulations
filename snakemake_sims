@@ -1,20 +1,3 @@
-## create seeds, only has to be done once (depending on the number of runs per simulation)
-
-# yanis todo:
-# todo: fix folder system for version that will be made available to public/published so it agrees with:
-# https://snakemake.readthedocs.io/en/stable/snakefiles/deployment.html
-# simngs, wgsim
-# yaahs - juicer \ module
-# blocktools / conda
-# how to simulate diploid genome? alt assembly or mutation simulator?
-# add megahit
-# assemblers { 
-# pb-falcon / pb-assembly
-# peregrine-2021
-# trio-binning
-# dipasm
-# hi-canu / conda as canu }
-# ipa \ conda pbipa 
 # benchamrking for hifi assembler: 
 # https://www.biorxiv.org/content/10.1101/2022.02.15.480579v1.full
 
@@ -33,6 +16,7 @@
 # add contamination (here from ecoli and human equalling 1%)
 # add resouce_mem restrictions
 # save larger files to specific folder "share/pool" to be on the safe side
+# add read length to the beggining of folders
 
 import random
 import os
@@ -52,6 +36,7 @@ seed_list=[format(x, '02d') for x in range(1,21,1)]
 # samtools view path/to/fastafile | wc -l
 # and verify by making sure it matches the ncbi entry
 # keep all scaffolds because eventhough they may be unplaced they're still part of the genome
+# pbsim will simulate each scaffold so you need a list of numbers for each scaffold in the ref genome
 CHROMS = ["%04d" % x for x in range(1,config["chrom_num"]+1)]
 
 ## create a haplotype list
@@ -66,6 +51,7 @@ sample_prefix=config["sample_prefix"]
 SEED_HAP_1=config["genomes"]["SEED_HAP_1"]
 SEED_HAP_2=config["genomes"]["SEED_HAP_2"]
 
+READ_LENGTH=config["read_length"]
 
 #busco db to use
 LINEAGE=config["LINEAGE"]
@@ -147,14 +133,14 @@ def output_looper(seed_name, pref, hap, cat=""):
 
 rule all:
     input:
-        expand("bam_files/{seeds}_{hap}_{sample}_{chr_nm}.bam", seeds=seed_list, hap=hap_list, chr_nm=CHROMS,sample=sample_prefix),
-        expand("busco/{sample}/run_{db}/missing_busco_list.tsv",db=LINEAGE,sample=sample_prefix),
-        expand("bam_files/cont1_{chrn1}.bam",chrn1=chromnum_cont1_list),
-        expand("bam_files/cont2_{chrn2}.bam",chrn2=chromnum_cont2_list),
-        expand("fastq_files/{cont_file}.fastq.gz",cont_file=cont_prefix),
-        "stats/backmapping_stats.txt",
-        "stats/assembly_stats.txt",
-        "stats/read_stats.txt"
+        expand("%s/bam_files/{seeds}_{hap}_{sample}_{chr_nm}.bam" %READ_LENGTH, seeds=seed_list, hap=hap_list, chr_nm=CHROMS,sample=sample_prefix),
+        expand("%s/busco/{sample}/run_{db}/missing_busco_list.tsv" %READ_LENGTH, db=LINEAGE, sample=sample_prefix),
+        expand("%s/bam_files/cont1_{chrn1}.bam" %READ_LENGTH, chrn1=chromnum_cont1_list),
+        expand("%s/bam_files/cont2_{chrn2}.bam" %READ_LENGTH, chrn2=chromnum_cont2_list),
+        expand("%s/fastq_files/{cont_file}.fastq.gz" %READ_LENGTH, cont_file=cont_prefix),
+        "%s/stats/backmapping_stats.txt" %READ_LENGTH,
+        "%s/stats/assembly_stats.txt" %READ_LENGTH,
+        "%s/stats/read_stats.txt" %READ_LENGTH,
 
 #######################################
 
@@ -214,18 +200,20 @@ rule make_bam:
     input:
         sam = "/share/pool/simulations_collomics/{seeds}_{sample}_{hap}/{seeds}_{sample}_{chr_nm}.sam"
     output:
-        bam = "bam_files/{seeds}_{hap}_{sample}_{chr_nm}.bam"
-    shell:
-        "samtools view -b {input.sam} -o {output.bam} --threads 30"
+        bam = temp("%s/bam_files/{seeds}_{hap}_{sample}_{chr_nm}.bam" %READ_LENGTH)
+    shell: """
+        module load samtools/1.10
+        samtools view -b {input.sam} -o {output.bam} --threads 30
+    """
 
 ## get HiFi reads
 
 # if we want deep_consensus replace this rule with the code inside deepconsensus.smk
 rule run_ccs:
     input:
-        bam = "bam_files/{seeds}_{hap}_{sample}_{chr_nm}.bam"
+        bam = "%s/bam_files/{seeds}_{hap}_{sample}_{chr_nm}.bam" %READ_LENGTH
     output:
-        fastq = "fastq_files/{seeds}_{hap}_{sample}_{chr_nm}.fastq.gz"
+        fastq = temp("%s/fastq_files/{seeds}_{hap}_{sample}_{chr_nm}.fastq.gz" %READ_LENGTH)
     resources:
         mem_mb=100000
     conda:
@@ -245,10 +233,10 @@ include: "rules/contamination_sims.smk"
 
 rule cat_fastq:
     input:
-        fastq = expand("fastq_files/{seeds}_{hap}_{sample}_{chr_nm}.fastq.gz", seeds=seed_list, hap=hap_list, chr_nm=CHROMS,sample=sample_prefix),
-        contam = expand("fastq_files/{cont_file}.fastq.gz",cont_file=cont_prefix)
+        fastq = expand("%s/fastq_files/{seeds}_{hap}_{sample}_{chr_nm}.fastq.gz" %READ_LENGTH, seeds=seed_list, hap=hap_list, chr_nm=CHROMS,sample=sample_prefix),
+        contam = expand("%s/fastq_files/{cont_file}.fastq.gz" %READ_LENGTH,cont_file=cont_prefix)
     output:
-        "fastq_files/all_pbsim.fastq.gz"
+        temp("%s/fastq_files/all_pbsim.fastq.gz" %READ_LENGTH)
     shell:
         "cat {input.fastq} {input.contam} > {output}"
 
@@ -258,9 +246,9 @@ rule cat_fastq:
 
 rule hifiasm_assembly:
     input:
-        "fastq_files/all_pbsim.fastq.gz"
+        "%s/fastq_files/all_pbsim.fastq.gz" %READ_LENGTH
     output:
-        "assembly/pbsim_asm.p_ctg.gfa"
+        "%s/assembly/pbsim_asm.p_ctg.gfa" %READ_LENGTH
     threads:
         workflow.cores
     params:
@@ -278,9 +266,9 @@ rule hifiasm_assembly:
 
 rule gfa_to_fa:
     input:
-        "assembly/pbsim_asm.p_ctg.gfa"
+        "%s/assembly/pbsim_asm.p_ctg.gfa" %READ_LENGTH
     output:
-        "assembly/pbsim_asm.p_ctg.fa"
+        "%s/assembly/pbsim_asm.p_ctg.fa" %READ_LENGTH
     shell: """
         awk '/^S/{{print ">"$2;print $3}}' {input} > {output}
     """
@@ -289,9 +277,9 @@ rule gfa_to_fa:
 
 rule assembly_stats:
     input:
-        "assembly/pbsim_asm.p_ctg.fa"
+        "%s/assembly/pbsim_asm.p_ctg.fa" %READ_LENGTH
     output:
-        "stats/assembly_stats.txt"
+        "%s/stats/assembly_stats.txt" %READ_LENGTH
     shell:
         "seqkit stats -a -T {input} > {output}"
 
@@ -309,15 +297,15 @@ rule assembly_stats:
 #tetrapoda_odb9
 rule RUN_BUSCO:
     input:
-        "assembly/pbsim_asm.p_ctg.fa"
+        "%s/assembly/pbsim_asm.p_ctg.fa" %READ_LENGTH
     output:
-        "busco/{sample}/run_{db}/missing_busco_list.tsv"
+        "%s/busco/{sample}/run_{db}/missing_busco_list.tsv" %READ_LENGTH
     threads:
         workflow.cores
     params:
-        dataset_dir="busco_downloads",
-        out_dir="busco/",
-        run_name=sample_prefix,
+        dataset_dir="%s/busco_downloads" %READ_LENGTH,
+        out_dir="%s/busco/" %READ_LENGTH,
+        run_name="%s/sample_prefix" %READ_LENGTH,
         lineage=LINEAGE
     conda:
         "envs/busco.yml"
@@ -337,9 +325,9 @@ rule RUN_BUSCO:
 # in a conda environment you should be able to call shred.sh from the terminal like normal
 rule backmapping_shredding:
     input:
-        "assembly/pbsim_asm.p_ctg.fa"
+        "%s/assembly/pbsim_asm.p_ctg.fa" %READ_LENGTH
     output:
-        "split_assembly/split_assembly.fa"
+        "%s/split_assembly/split_assembly.fa" %READ_LENGTH
     conda:
         "envs/bbtools.yml"
     shell:
@@ -349,56 +337,62 @@ rule backmapping_shredding:
 
 rule backmapping_mapping:
     input:
-        asm = "split_assembly/split_assembly.fa",
+        asm = "%s/split_assembly/split_assembly.fa" %READ_LENGTH,
         genome = SEED_HAP_1
     output:
-        temp("split_assembly/backmapped.sam")
+        temp("%s/split_assembly/backmapped.sam" %READ_LENGTH)
     threads:
         config["CORES"]
     conda:
         "envs/bwa.yml"
-    shell:
-        "bwa mem {input.genome} {input.asm} -t {threads} > {output}"
+    shell: """
+        bwa index {input.genome}
+        bwa mem {input.genome} {input.asm} -t {threads} > {output}
+    """
 
 ## convert sam to bam
 
 rule backmapping_bam:
     input:
-        "split_assembly/backmapped.sam"
+        "%s/split_assembly/backmapped.sam" %READ_LENGTH
     output:
-        temp("split_assembly/backmapped.bam")
-    shell:
-        "samtools view -b -o {output} {input} --threads 40"
+        temp("%s/split_assembly/backmapped.bam" %READ_LENGTH)
+    shell: """
+        module load samtools/1.10
+        samtools view -b -o {output} {input} --threads 40
+    """
 
 ## sort bam file
 
 rule backmapping_sort:
     input:
-        "split_assembly/backmapped.bam"
+        "%s/split_assembly/backmapped.bam" %READ_LENGTH
     output:
-        temp("split_assembly/backmapped.srt.bam")
-    shell:
-        "samtools sort {input} --threads 40 > {output}"
+        temp("%s/split_assembly/backmapped.srt.bam" %READ_LENGTH)
+    shell: """
+        module load samtools/1.10
+        samtools sort {input} --threads 40 > {output}
+    """
 
 ## compute average number of bases overlapped by at least one read
 
 rule backmapping_stats:
     input:
-        "split_assembly/backmapped.srt.bam"
+        "%s/split_assembly/backmapped.srt.bam" %READ_LENGTH
     output:
-        "stats/backmapping_stats.txt"
-    shell:
-        "samtools coverage -m -A {input} > {output}"
+        "%s/stats/backmapping_stats.txt" %READ_LENGTH
+    shell: """
+        module load samtools/1.10
+        samtools coverage -m -A {input} > {output}
+    """
 
 
 
 rule read_stats:
     input:
-        "fastq_files/all_pbsim.fastq.gz"
+        "%s/fastq_files/all_pbsim.fastq.gz" %READ_LENGTH
     output:
-        "stats/read_stats.txt"
-    conda:
-        "envs/seqkit.yml"
+        "%s/stats/read_stats.txt" %READ_LENGTH
     shell:
         "seqkit stats -a -T {input} > {output}"
 
