@@ -70,6 +70,7 @@ rule make_bam_conta1:
     output:
         bam1 = temp("%s/bam_files/cont1_{chrn1}.bam" %READ_LENGTH)
     shell: """
+        module load samtools/1.10
         samtools view -b {input.sam1} -o {output.bam1} --threads 30 
     """
 
@@ -92,5 +93,7 @@ rule run_ccs_conta:
         fastq = temp("%s/fastq_files/{cont_file}.fastq.gz" %READ_LENGTH)
     resources:
         mem_mb=100000
+    conda:
+        "../envs/ccs.yml"
     shell:
         "ccs {input.bam} {output.fastq} -j 5"

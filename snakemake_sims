@@ -64,10 +64,10 @@ wildcard_constraints:
     hap="hap[0-9]",
     seeds="[0-9]+",
     chr_nm="[0-9]{4}",
-    cont="cont[0-9]",
     chrn1="[0-9]{4}",
-    chrn2="[0-9]{4}",
-    cont_file="cont[0-9]_[0-9]{4}"
+    chrn2="[0-9]{4}"
+    # cont="cont[0-9]",
+    # cont_file="cont[0-9]_[0-9]{4}"
 
 #######################################
 
@@ -87,35 +87,35 @@ wildcard_constraints:
 
 # because of how python subtraction/ath works, to get a round up math expression you need the decimal package
 # to do subtraction that is rounded down to the last 3 digits use:
-getcontext().prec = 3
-rcd=float(Decimal(config["depth"]*20*2/0.95) - Decimal(config["depth"]*20*2))
+# getcontext().prec = 3
+# rcd=float(Decimal(config["depth"]*20*2/0.95) - Decimal(config["depth"]*20*2))
 
-# percentage of bacterial and human contamination
-# as a proportion of the total contamination
-# don't allow a value of 0, ie 0 depth for either species
-cont1_percent=round(random.uniform(0.5, 0.9999),3)
+# # percentage of bacterial and human contamination
+# # as a proportion of the total contamination
+# # don't allow a value of 0, ie 0 depth for either species
+# cont1_percent=round(random.uniform(0.5, 0.9999),3)
 
-cont2_percent=float(Decimal(1) - Decimal(cont1_percent))
+# cont2_percent=float(Decimal(1) - Decimal(cont1_percent))
 
-# depth number to be used by pbsim, round up to 2 digits
-cont1depth=round(cont1_percent*rcd,2)
-cont2depth=round(cont2_percent*rcd,2)
+# # depth number to be used by pbsim, round up to 2 digits
+# cont1depth=round(cont1_percent*rcd,2)
+# cont2depth=round(cont2_percent*rcd,2)
 
 
-# to find genomes:
-# esearch -db nuccore -query "GCF_003018455.1" | efetch -format fasta > DATA/ecoli.fasta
-#  wget https://s3.amazonaws.com/genomeark/species/Homo_sapiens/mHomSap3/assembly_curated/mHomSap3.mat.cur.20200716.fasta.gz DATA/human/
+# # to find genomes:
+# # esearch -db nuccore -query "GCF_003018455.1" | efetch -format fasta > DATA/ecoli.fasta
+# #  wget https://s3.amazonaws.com/genomeark/species/Homo_sapiens/mHomSap3/assembly_curated/mHomSap3.mat.cur.20200716.fasta.gz DATA/human/
 
-contaminant_1=config["genomes"]["contam1"]
-contaminant_2=config["genomes"]["contam2"]
+# contaminant_1=config["genomes"]["contam1"]
+# contaminant_2=config["genomes"]["contam2"]
 
-# count number of chromosomes for each file
-chromnum_cont1 = len([1 for line in open(contaminant_1) if line.startswith(">")])
-chromnum_cont1_list = ["%04d" % x for x in range(1,chromnum_cont1+1)]
-chromnum_cont2 = len([1 for line in open(contaminant_2) if line.startswith(">")])
-chromnum_cont2_list = ["%04d" % x for x in range(1,chromnum_cont2+1)]
+# # count number of chromosomes for each file
+# chromnum_cont1 = len([1 for line in open(contaminant_1) if line.startswith(">")])
+# chromnum_cont1_list = ["%04d" % x for x in range(1,chromnum_cont1+1)]
+# chromnum_cont2 = len([1 for line in open(contaminant_2) if line.startswith(">")])
+# chromnum_cont2_list = ["%04d" % x for x in range(1,chromnum_cont2+1)]
 
-cont_prefix=expand("cont1_{chrn1}",chrn1=chromnum_cont1_list) + expand("cont2_{chrn2}",chrn2=chromnum_cont2_list)
+# cont_prefix=expand("cont1_{chrn1}",chrn1=chromnum_cont1_list) + expand("cont2_{chrn2}",chrn2=chromnum_cont2_list)
 
 #######################################
 
@@ -143,9 +143,9 @@ rule all:
     input:
         expand("%s/bam_files/{seeds}_{hap}_{sample}_{chr_nm}.bam" %READ_LENGTH, seeds=seed_list, hap=hap_list, chr_nm=CHROMS,sample=sample_prefix),
         expand("%s/busco/{sample}/run_{db}/missing_busco_list.tsv" %READ_LENGTH, db=LINEAGE, sample=sample_prefix),
-        expand("%s/bam_files/cont1_{chrn1}.bam" %READ_LENGTH, chrn1=chromnum_cont1_list),
-        expand("%s/bam_files/cont2_{chrn2}.bam" %READ_LENGTH, chrn2=chromnum_cont2_list),
-        expand("%s/fastq_files/{cont_file}.fastq.gz" %READ_LENGTH, cont_file=cont_prefix),
+        # expand("%s/bam_files/cont1_{chrn1}.bam" %READ_LENGTH, chrn1=chromnum_cont1_list),
+        # expand("%s/bam_files/cont2_{chrn2}.bam" %READ_LENGTH, chrn2=chromnum_cont2_list),
+        # expand("%s/fastq_files/{cont_file}.fastq.gz" %READ_LENGTH, cont_file=cont_prefix),
         "%s/stats/backmapping_stats.txt" %READ_LENGTH,
         "%s/stats/assembly_stats.txt" %READ_LENGTH,
         "%s/stats/read_stats.txt" %READ_LENGTH,
@@ -232,7 +232,7 @@ rule run_ccs:
 #######################################
 
 # do simulations for contaminants
-include: "rules/contamination_sims.smk"
+#include: "rules/contamination_sims.smk"
 
 #######################################
 
@@ -241,12 +241,12 @@ include: "rules/contamination_sims.smk"
 
 rule cat_fastq:
     input:
-        fastq = expand("%s/fastq_files/{seeds}_{hap}_{sample}_{chr_nm}.fastq.gz" %READ_LENGTH, seeds=seed_list, hap=hap_list, chr_nm=CHROMS,sample=sample_prefix),
-        contam = expand("%s/fastq_files/{cont_file}.fastq.gz" %READ_LENGTH,cont_file=cont_prefix)
+        fastq = expand("%s/fastq_files/{seeds}_{hap}_{sample}_{chr_nm}.fastq.gz" %READ_LENGTH, seeds=seed_list, hap=hap_list, chr_nm=CHROMS,sample=sample_prefix)
+        #contam = expand("%s/fastq_files/{cont_file}.fastq.gz" %READ_LENGTH,cont_file=cont_prefix)
     output:
         temp("%s/fastq_files/all_pbsim.fastq.gz" %READ_LENGTH)
     shell:
-        "cat {input.fastq} {input.contam} > {output}"
+        "cat {input.fastq} > {output}"
 
 ## assemble with hifiasm using default parameters
 
