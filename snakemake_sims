@@ -311,17 +311,19 @@ rule RUN_BUSCO:
     threads:
         workflow.cores
     params:
-        dataset_dir="%s/busco_downloads" %READ_LENGTH,
+        dataset_dir="busco_downloads",
         out_dir="%s/busco/" %READ_LENGTH,
-        run_name="%s/sample_prefix" %READ_LENGTH,
+        run_name="%s/{sample}" %READ_LENGTH,
         lineage=LINEAGE
     conda:
         "envs/busco.yml"
+    resources:
+        tmpdir="/share/pool/simulations_collomics/%s/tmp" %READ_LENGTH
     shell: """
-        busco -m genome \
+        busco -f -m genome \
         -c {threads} \
         -i {input} \
-        -o {params.run_name}
+        -o {params.run_name} \
         --download_path {params.dataset_dir} \
         --out_path {params.out_dir} \
         -l {params.lineage} \
