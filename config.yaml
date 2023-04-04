@@ -1,11 +1,15 @@
 # path to seed hap 1 & 2
-# IMPORTANT: use bwa index and samtools faidx to index the files
+# consider using bwa index and samtools faidx to index the files
 #https://www.biostars.org/p/12417/
 genomes:
-  SEED_HAP_1: DATA/TaeGut/bTaeGut1.pri.final.fasta
-  SEED_HAP_2: DATA/TaeGut/mutated.final.fasta
-  contam1: DATA/ecoli/ecoli.fasta
-  contam2: DATA/human/humanmat.fasta
+  SEED_HAP_1:
+    fasta: DATA/TaeGut/bTaeGut1.pri.final.fasta
+    chrom_num: 551
+  SEED_HAP_2:
+    fasta: DATA/TaeGut/mutated.final.fasta
+    chrom_num: 1656
+  #contam1: DATA/ecoli/ecoli.fasta
+  #contam2: DATA/human/humanmat.fasta
 
 # set up a different amount of cores for jobs that should run fewer than the rest of the analysis
 CORES: 5
@@ -15,9 +19,7 @@ LINEAGE: aves_odb10
 
 sample_prefix: TaeGut
 
-# IMPORTANT: find this number with: samtools view path/to/fastafile | wc -l
-chrom_num: 41
+read_length: 3000
 
-read_length: 3500
-
+#15x depth
 depth: 0.75
