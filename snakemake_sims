@@ -1,177 +1,76 @@
-# benchamrking for hifi assembler: 
-# https://www.biorxiv.org/content/10.1101/2022.02.15.480579v1.full
-
-
-
-######### Changes #########
-# found more pythonic way for seed list
-# added a sample prefix, so user can specify the sample
-# changed output looper to include sample name
-# wildcard constraints so snakemake doesnt get confused
-# small changes to hifiasm
-# changed awk command
-# removed module load, all programs should be in conda environment for reproducibility
-# adapted script to sg cluster with module and file location changes
-# add script for combining scaffolds to make simulations easier
-# add contamination (here from ecoli and human equalling 1%)
-# add resouce_mem restrictions
-# save larger files to specific folder "share/pool" to be on the safe side
-# add read length to the beggining of folders
-
 import random
 import os
 from decimal import *
 
-# CONFIG
-# for i in range(0,10):
-#     n = random.randint(1000,100000)
-#     seed_list.append(n)
-# seed_list = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20"]
 
 configfile: "config.yaml"
 
 seed_list=[format(x, '02d') for x in range(1,21,1)]
 
-## create chr_nm list (0001 - 0067)
-# find out the number of scaffolds of your assembly with : 
-# samtools view path/to/fastafile | wc -l
-# and verify by making sure it matches the ncbi entry
-# keep all scaffolds because eventhough they may be unplaced they're still part of the genome
-# pbsim will simulate each scaffold so you need a list of numbers for each scaffold in the ref genome
-CHROMS = ["%04d" % x for x in range(1,config["chrom_num"]+1)]
-
-## create a haplotype list
 hap_list = ["hap1", "hap2"]
 
 #name of sample 
 sample_prefix=config["sample_prefix"]
 
 # path to seed hap 1 & 2
-# and to genomes to be used for contamination sims
 
-SEED_HAP_1=config["genomes"]["SEED_HAP_1"]
-SEED_HAP_2=config["genomes"]["SEED_HAP_2"]
+SEED_HAP_1=config["genomes"]["SEED_HAP_1"]["fasta"]
+SEED_HAP_2=config["genomes"]["SEED_HAP_2"]["fasta"]
+
+SEED_HAP_1_chromnum = ["%04d" % x for x in range(1,config["genomes"]["SEED_HAP_1"]["chrom_num"]+1)]
+SEED_HAP_2_chromnum = ["%04d" % x for x in range(1,config["genomes"]["SEED_HAP_2"]["chrom_num"]+1)]
 
 READ_LENGTH=config["read_length"]
 
 #busco db to use
 LINEAGE=config["LINEAGE"]
 
-#######################################
 
-# restrict wildcards to avoid smk confusion
 wildcard_constraints:
     hap="hap[0-9]",
     seeds="[0-9]+",
-    chr_nm="[0-9]{4}",
-    chrn1="[0-9]{4}",
-    chrn2="[0-9]{4}"
-    # cont="cont[0-9]",
-    # cont_file="cont[0-9]_[0-9]{4}"
-
-#######################################
-
-# set up wildcards for contaminant DNA:
-# given we simulate 60X coverage, a 1% contamination (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3487130/)
-# would require total 3X contaminants in total for a 30X 
-# let's decide the amount of depth at random:
-
-# NOTE: pbsim depth can't be 0
-# calculate contamination depth based on the genome depth
-# so that the extra contamination will be 5% of the total amount of DNA:
-
-# relative_cont_depth = depth/(95%) - depth
-# here depth is relative to 1 simulation, se we multiply it by the number of simulations done
-# assuming that if there is contamination the amount of bacterial cont. will be higher than the human cont. 
-# so we want a scenario where more than 50% of contamination comes from bacteria (cont 1)
-
-# because of how python subtraction/ath works, to get a round up math expression you need the decimal package
-# to do subtraction that is rounded down to the last 3 digits use:
-# getcontext().prec = 3
-# rcd=float(Decimal(config["depth"]*20*2/0.95) - Decimal(config["depth"]*20*2))
-
-# # percentage of bacterial and human contamination
-# # as a proportion of the total contamination
-# # don't allow a value of 0, ie 0 depth for either species
-# cont1_percent=round(random.uniform(0.5, 0.9999),3)
-
-# cont2_percent=float(Decimal(1) - Decimal(cont1_percent))
-
-# # depth number to be used by pbsim, round up to 2 digits
-# cont1depth=round(cont1_percent*rcd,2)
-# cont2depth=round(cont2_percent*rcd,2)
+    chr_nm1="[0-9]{4}",
+    chr_nm2="[0-9]{4}"
 
 
-# # to find genomes:
-# # esearch -db nuccore -query "GCF_003018455.1" | efetch -format fasta > DATA/ecoli.fasta
-# #  wget https://s3.amazonaws.com/genomeark/species/Homo_sapiens/mHomSap3/assembly_curated/mHomSap3.mat.cur.20200716.fasta.gz DATA/human/
-
-# contaminant_1=config["genomes"]["contam1"]
-# contaminant_2=config["genomes"]["contam2"]
-
-# # count number of chromosomes for each file
-# chromnum_cont1 = len([1 for line in open(contaminant_1) if line.startswith(">")])
-# chromnum_cont1_list = ["%04d" % x for x in range(1,chromnum_cont1+1)]
-# chromnum_cont2 = len([1 for line in open(contaminant_2) if line.startswith(">")])
-# chromnum_cont2_list = ["%04d" % x for x in range(1,chromnum_cont2+1)]
-
-# cont_prefix=expand("cont1_{chrn1}",chrn1=chromnum_cont1_list) + expand("cont2_{chrn2}",chrn2=chromnum_cont2_list)
-
-#######################################
-
-# example:
-# 01_SAMPLE_hap1/01_SAMPLE_0025
-# "['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20']\
-# _lynCan1_hap1/['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20']\
-# _lynCan1_0028.sam"
-#for each sample, for each haplotype, simulate each chromosome a seed number of times
-#each chromosome will be simulated a seed # of times
-def output_looper(seed_name, pref, hap, cat=""):
-    for i in CHROMS:
+def output_looper(seed_name, pref, hap, chrom_num, cat=""):
+    for i in chrom_num:
         if cat == "maf":
-            yield "/share/pool/simulations_collomics/{0}_{1}_{2}/{0}_{1}_{3}.maf".format(seed_name, pref, hap, i)
+            yield "/share/pool/simulations_collomics/{4}/{0}_{1}_{2}/{0}_{1}_{3}.maf".format(seed_name, pref, hap, i, "{READ_LENGTH}")
         elif cat == "ref":
-            yield "/share/pool/simulations_collomics/{0}_{1}_{2}/{0}_{1}_{3}.ref".format(seed_name, pref, hap, i)
+            yield "/share/pool/simulations_collomics/{4}/{0}_{1}_{2}/{0}_{1}_{3}.ref".format(seed_name, pref, hap, i, "{READ_LENGTH}")
         elif cat == "sam":
-            yield "/share/pool/simulations_collomics/{0}_{1}_{2}/{0}_{1}_{3}.sam".format(seed_name, pref, hap, i)
-
-## desired output after one full run
-
-#######################################
+            yield "/share/pool/simulations_collomics/{4}/{0}_{1}_{2}/{0}_{1}_{3}.sam".format(seed_name, pref, hap, i, "{READ_LENGTH}")
+        elif cat == "bam":
+            yield "/share/pool/simulations_collomics/{4}/{0}_{1}_{2}/{0}_{1}_{3}.bam".format(seed_name, pref, hap, i, "{READ_LENGTH}")
+        elif cat == "fastq.gz":
+            yield "/share/pool/simulations_collomics/{4}/{0}_{1}_{2}/{0}_{1}_{3}.fastq.gz".format(seed_name, pref, hap, i, "{READ_LENGTH}")
 
 rule all:
     input:
-        expand("%s/bam_files/{seeds}_{hap}_{sample}_{chr_nm}.bam" %READ_LENGTH, seeds=seed_list, hap=hap_list, chr_nm=CHROMS,sample=sample_prefix),
+        expand("/share/pool/simulations_collomics/%s/{seeds}_{sample}_{hap}/{seeds}_{sample}_{chr_nm1}.fastq.gz" %READ_LENGTH, seeds=seed_list, hap=hap_list[0], chr_nm1=SEED_HAP_1_chromnum,sample=sample_prefix),
+        expand("/share/pool/simulations_collomics/%s/{seeds}_{sample}_{hap}/{seeds}_{sample}_{chr_nm2}.fastq.gz" %READ_LENGTH, seeds=seed_list, hap=hap_list[1], chr_nm2=SEED_HAP_2_chromnum,sample=sample_prefix),
         expand("%s/busco/{sample}/run_{db}/missing_busco_list.tsv" %READ_LENGTH, db=LINEAGE, sample=sample_prefix),
-        # expand("%s/bam_files/cont1_{chrn1}.bam" %READ_LENGTH, chrn1=chromnum_cont1_list),
-        # expand("%s/bam_files/cont2_{chrn2}.bam" %READ_LENGTH, chrn2=chromnum_cont2_list),
-        # expand("%s/fastq_files/{cont_file}.fastq.gz" %READ_LENGTH, cont_file=cont_prefix),
+        "%s/fastq_files/all_pbsim.fastq.gz" %READ_LENGTH,
         "%s/stats/backmapping_stats.txt" %READ_LENGTH,
         "%s/stats/assembly_stats.txt" %READ_LENGTH,
-        "%s/stats/read_stats.txt" %READ_LENGTH,
+        "%s/stats/read_stats.txt" %READ_LENGTH
 
-#######################################
-
-## Step 1: Simulate and reassemble reads for both haplotypes 
-## simulate reads with pbsim, for different read lengths, one can adjust the length per read in
-## the shell command. If coverage per run is 3, 10 directories with output files can be generated in about 3 hours
-#output_looper(seed_name={seed_list}, hap=hap_list[0], cat="sam")
 rule run_sim_hap1:
-    input: 
-        genome = SEED_HAP_1
+    input:
+        genome=SEED_HAP_1
     output:
-        bam = temp(output_looper("{seeds}", "{sample}", hap=hap_list[0], cat="sam")),
-        ref = temp(output_looper("{seeds}", "{sample}", hap=hap_list[0], cat="ref")),
-        maf = temp(output_looper("{seeds}", "{sample}", hap=hap_list[0], cat="maf"))
+        bam=temp(output_looper("{seeds}", "{sample}", hap_list[0], SEED_HAP_1_chromnum, cat="sam")),
+        ref=temp(output_looper("{seeds}", "{sample}", hap_list[0], SEED_HAP_1_chromnum, cat="ref")),
+        maf=temp(output_looper("{seeds}", "{sample}", hap_list[0], SEED_HAP_1_chromnum, cat="maf"))
     params:
-       	seed_id = "{seeds}",
-        prefix_sim = "/share/pool/simulations_collomics/{seeds}_{sample}_hap1/{seeds}_{sample}",
-        lngth = config["read_length"],
-        dpth = config["depth"]
-#    envmodules:
-#        "pbsim3/3.0.0"
+        seed_id="{seeds}",
+        prefix_sim="/share/pool/simulations_collomics/{READ_LENGTH}/{seeds}_{sample}_hap1/{seeds}_{sample}",
+        lngth=config["read_length"],
+        dpth=config["depth"]
     resources:
-        mem_mb=100000
+        mem_mb=100000,
+        tmpdir="/share/pool/simulations_collomics/%s/tmp" %READ_LENGTH
     shell: """
         module load pbsim3/3.0.0
         pbsim --prefix {params.prefix_sim} --strategy wgs --genome {input.genome} \
@@ -183,18 +82,17 @@ rule run_sim_hap2:
     input: 
         genome = SEED_HAP_2 ## fasta file was artificially mutated with SNPs and Indels
     output:
-        bam = temp(output_looper("{seeds}", "{sample}", hap=hap_list[1], cat="sam")),
-        ref = temp(output_looper("{seeds}", "{sample}", hap=hap_list[1], cat="ref")),
-        maf = temp(output_looper("{seeds}", "{sample}", hap=hap_list[1], cat="maf"))
+        bam = temp(output_looper("{seeds}", "{sample}", hap_list[1], SEED_HAP_2_chromnum, cat="sam")),
+        ref = temp(output_looper("{seeds}", "{sample}", hap_list[1], SEED_HAP_2_chromnum, cat="ref")),
+        maf = temp(output_looper("{seeds}", "{sample}", hap_list[1], SEED_HAP_2_chromnum, cat="maf"))
     params:
-       	seed_id = "{seeds}",
-        prefix_sim = "/share/pool/simulations_collomics/{seeds}_{sample}_hap2/{seeds}_{sample}",
+        seed_id = "{seeds}",
+        prefix_sim = "/share/pool/simulations_collomics/{READ_LENGTH}/{seeds}_{sample}_hap2/{seeds}_{sample}",
         lngth = config["read_length"],
         dpth = config["depth"]
-#    envmodules:
-#        "pbsim3/3.0.0"
     resources:
-        mem_mb=100000
+        mem_mb = 100000,
+        tmpdir = "/share/pool/simulations_collomics/%s/tmp" %READ_LENGTH
     shell: """
         module load pbsim3/3.0.0
         pbsim --prefix {params.prefix_sim} --strategy wgs --genome {input.genome} \
@@ -202,37 +100,64 @@ rule run_sim_hap2:
         --length-mean {params.lngth} --pass-num 10 --seed {params.seed_id} 
     """
 
-## convert sam output from simulations to bam
 
-rule make_bam:
+rule make_bam1:
     input:
-        sam = "/share/pool/simulations_collomics/{seeds}_{sample}_{hap}/{seeds}_{sample}_{chr_nm}.sam"
+        hap1sam="/share/pool/simulations_collomics/{READ_LENGTH}/{seeds}_{sample}_hap1/{seeds}_{sample}_{chr_nm1}.sam"
+        #output_looper("{seeds}", "{sample}", hap_list[0], SEED_HAP_1_chromnum, cat="sam"),
     output:
-        bam = temp("%s/bam_files/{seeds}_{hap}_{sample}_{chr_nm}.bam" %READ_LENGTH)
+        hap1bam="/share/pool/simulations_collomics/{READ_LENGTH}/{seeds}_{sample}_hap1/{seeds}_{sample}_{chr_nm1}.bam",
+    resources:
+        mem_mb=100000,
+        tmpdir="/share/pool/simulations_collomics/%s/tmp" %READ_LENGTH
+    threads:
+        min(workflow.cores,30)
     shell: """
         module load samtools/1.10
-        samtools view -b {input.sam} -o {output.bam} --threads 30
+        samtools view -b {input.hap1sam} -o {output.hap1bam} --threads {threads}
+
     """
 
-## get HiFi reads
-
-# if we want deep_consensus replace this rule with the code inside deepconsensus.smk
-rule run_ccs:
+rule make_bam2:
     input:
-        bam = "%s/bam_files/{seeds}_{hap}_{sample}_{chr_nm}.bam" %READ_LENGTH
+        hap2sam="/share/pool/simulations_collomics/{READ_LENGTH}/{seeds}_{sample}_hap2/{seeds}_{sample}_{chr_nm2}.sam"
     output:
-        fastq = temp("%s/fastq_files/{seeds}_{hap}_{sample}_{chr_nm}.fastq.gz" %READ_LENGTH)
+        hap2bam="/share/pool/simulations_collomics/{READ_LENGTH}/{seeds}_{sample}_hap2/{seeds}_{sample}_{chr_nm2}.bam"
     resources:
-        mem_mb=100000
+        mem_mb=100000,
+        tmpdir="/share/pool/simulations_collomics/%s/tmp" %READ_LENGTH
+    threads:
+        min(workflow.cores,30)
+    shell: """
+        module load samtools/1.10
+        samtools view -b {input.hap2sam} -o {output.hap2bam} --threads {threads}
+    """
+
+rule run_ccs1:
+    input:
+        hap1bam="/share/pool/simulations_collomics/{READ_LENGTH}/{seeds}_{sample}_hap1/{seeds}_{sample}_{chr_nm1}.bam"
+    output:
+        hap1fastq="/share/pool/simulations_collomics/{READ_LENGTH}/{seeds}_{sample}_hap1/{seeds}_{sample}_{chr_nm1}.fastq.gz"
+    resources:
+        mem_mb=100000,
+        tmpdir="/share/pool/simulations_collomics/%s/tmp" %READ_LENGTH
     conda:
         "envs/ccs.yml"
-    shell:
-        "ccs {input.bam} {output.fastq} -j 5"
+    shell: 
+        "ccs {input.hap1bam} {output.hap1fastq} -j 5 "
 
-#######################################
-
-# do simulations for contaminants
-#include: "rules/contamination_sims.smk"
+rule run_ccs2:
+    input:
+        hap2bam="/share/pool/simulations_collomics/{READ_LENGTH}/{seeds}_{sample}_hap2/{seeds}_{sample}_{chr_nm2}.bam"
+    output:
+        hap2fastq="/share/pool/simulations_collomics/{READ_LENGTH}/{seeds}_{sample}_hap2/{seeds}_{sample}_{chr_nm2}.fastq.gz"
+    resources:
+        mem_mb=100000,
+        tmpdir="/share/pool/simulations_collomics/%s/tmp" %READ_LENGTH
+    conda:
+        "envs/ccs.yml"
+    shell: 
+        "ccs {input.hap2bam} {output.hap2fastq} -j 5"
 
 #######################################
 
@@ -241,16 +166,13 @@ rule run_ccs:
 
 rule cat_fastq:
     input:
-        fastq = expand("%s/fastq_files/{seeds}_{hap}_{sample}_{chr_nm}.fastq.gz" %READ_LENGTH, seeds=seed_list, hap=hap_list, chr_nm=CHROMS,sample=sample_prefix)
-        #contam = expand("%s/fastq_files/{cont_file}.fastq.gz" %READ_LENGTH,cont_file=cont_prefix)
+        hap1=expand("/share/pool/simulations_collomics/%s/{seeds}_{sample}_{hap}/{seeds}_{sample}_{chr_nm1}.fastq.gz" %READ_LENGTH, seeds=seed_list, hap=hap_list[0], chr_nm1=SEED_HAP_1_chromnum,sample=sample_prefix),
+        hap2=expand("/share/pool/simulations_collomics/%s/{seeds}_{sample}_{hap}/{seeds}_{sample}_{chr_nm2}.fastq.gz" %READ_LENGTH, seeds=seed_list, hap=hap_list[1], chr_nm2=SEED_HAP_2_chromnum,sample=sample_prefix)
     output:
         temp("%s/fastq_files/all_pbsim.fastq.gz" %READ_LENGTH)
     shell:
-        "cat {input.fastq} > {output}"
+        "cat {input.hap1} {input.hap2} > {output}"
 
-## assemble with hifiasm using default parameters
-
-#######################################
 
 rule hifiasm_assembly:
     input:
@@ -263,8 +185,12 @@ rule hifiasm_assembly:
         inputpre="%s/assembly/pbsim_asm" %READ_LENGTH
     conda:
         "envs/hifiasm.yml"
-    shell:
-        "hifiasm --primary -l2 -t {threads} -o {params.inputpre} {input}"
+    resources:
+        mem_mb=100000,
+        tmpdir="/share/pool/simulations_collomics/%s/tmp" %READ_LENGTH
+    shell: """
+        hifiasm --primary -l2 -t {threads} -o {params.inputpre} {input}
+    """
 
 #######################################
 
@@ -277,6 +203,9 @@ rule gfa_to_fa:
         "%s/assembly/pbsim_asm.p_ctg.gfa" %READ_LENGTH
     output:
         "%s/assembly/pbsim_asm.p_ctg.fa" %READ_LENGTH
+    resources:
+        mem_mb=100000,
+        tmpdir="/share/pool/simulations_collomics/%s/tmp" %READ_LENGTH
     shell: """
         awk '/^S/{{print ">"$2;print $3}}' {input} > {output}
     """
@@ -288,6 +217,9 @@ rule assembly_stats:
         "%s/assembly/pbsim_asm.p_ctg.fa" %READ_LENGTH
     output:
         "%s/stats/assembly_stats.txt" %READ_LENGTH
+    resources:
+        mem_mb=100000,
+        tmpdir="/share/pool/simulations_collomics/%s/tmp" %READ_LENGTH
     shell:
         "seqkit stats -a -T {input} > {output}"
 
@@ -313,7 +245,7 @@ rule RUN_BUSCO:
     params:
         dataset_dir="busco_downloads",
         out_dir="%s/busco/" %READ_LENGTH,
-        run_name="%s/{sample}" %READ_LENGTH,
+        run_name="{sample}",
         lineage=LINEAGE
     conda:
         "envs/busco.yml"
@@ -340,6 +272,9 @@ rule backmapping_shredding:
         "%s/split_assembly/split_assembly.fa" %READ_LENGTH
     conda:
         "envs/bbtools.yml"
+    resources:
+        mem_mb=100000,
+        tmpdir="/share/pool/simulations_collomics/%s/tmp" %READ_LENGTH
     shell:
         "shred.sh -Xmx10g in={input} out={output} length=150 minlength=10 overlap=50"
 
@@ -355,8 +290,11 @@ rule backmapping_mapping:
         config["CORES"]
     conda:
         "envs/bwa.yml"
+    resources:
+        mem_mb=100000,
+        tmpdir="/share/pool/simulations_collomics/%s/tmp" %READ_LENGTH
     shell: """
-        # bwa index {input.genome}
+        bwa index {input.genome}
         bwa mem {input.genome} {input.asm} -t {threads} > {output}
     """
 
@@ -367,9 +305,14 @@ rule backmapping_bam:
         "%s/split_assembly/backmapped.sam" %READ_LENGTH
     output:
         temp("%s/split_assembly/backmapped.bam" %READ_LENGTH)
+    resources:
+        mem_mb=100000,
+        tmpdir="/share/pool/simulations_collomics/%s/tmp" %READ_LENGTH
+    threads:
+        min(workflow.cores,40)
     shell: """
         module load samtools/1.10
-        samtools view -b -o {output} {input} --threads 40
+        samtools view -b -o {output} {input} --threads {threads}
     """
 
 ## sort bam file
@@ -379,9 +322,14 @@ rule backmapping_sort:
         "%s/split_assembly/backmapped.bam" %READ_LENGTH
     output:
         temp("%s/split_assembly/backmapped.srt.bam" %READ_LENGTH)
+    resources:
+        mem_mb=100000,
+        tmpdir="/share/pool/simulations_collomics/%s/tmp" %READ_LENGTH
+    threads:
+        min(workflow.cores,40)
     shell: """
         module load samtools/1.10
-        samtools sort {input} --threads 40 > {output}
+        samtools sort {input} --threads {threads} > {output}
     """
 
 ## compute average number of bases overlapped by at least one read
@@ -391,18 +339,22 @@ rule backmapping_stats:
         "%s/split_assembly/backmapped.srt.bam" %READ_LENGTH
     output:
         "%s/stats/backmapping_stats.txt" %READ_LENGTH
+    resources:
+        mem_mb=100000,
+        tmpdir="/share/pool/simulations_collomics/%s/tmp" %READ_LENGTH
     shell: """
         module load samtools/1.10
         samtools coverage -m -A {input} > {output}
     """
-
-
 
 rule read_stats:
     input:
         "%s/fastq_files/all_pbsim.fastq.gz" %READ_LENGTH
     output:
         "%s/stats/read_stats.txt" %READ_LENGTH
+    resources:
+        mem_mb=100000,
+        tmpdir="/share/pool/simulations_collomics/%s/tmp" %READ_LENGTH
     shell:
         "seqkit stats -a -T {input} > {output}"
 
